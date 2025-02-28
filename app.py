@@ -176,7 +176,19 @@ def order_summary():
     else:
         flash('No order found.', 'danger')
         return redirect('/print_orders')
+    
+def get_products():
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, description, price, image FROM products")
+    products = cursor.fetchall()
+    conn.close()
+    return products
 
+@app.route('/stationary')
+def stationary():
+    products = get_products()
+    return render_template('stationary.html', products=products)
 
 
 
