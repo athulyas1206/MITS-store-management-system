@@ -26,8 +26,8 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="#">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Orders</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#orders">Orders</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#order-history">Order History</a></li>
                     <li class="nav-item"><a class="nav-link" href="/login">Logout</a></li>
                 </ul>
             </div>
@@ -36,8 +36,8 @@
 
     <div class="container mt-4">
         <div class="dashboard-container">
-            <h2 class="text-center">View All Print Orders</h2>
-            <div class="table-responsive">
+            <h2 class="text-center">Orders</h2>
+            <div id="orders" class="table-responsive">
                 <table class="table table-bordered table-striped mt-3">
                     <thead class="table-dark">
                         <tr>
@@ -54,7 +54,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for order in orders %}
+                        {% for order in active_orders %}
                         <tr id="order-{{ order[0] }}">
                             <td>{{ order[0] }}</td>
                             <td>{{ order[1] }}</td>
@@ -66,6 +66,42 @@
                             <td><a href="{{ order[7] }}" target="_blank">View File</a></td>
                             <td><span class="badge bg-success">{{ order[8] }}</span></td>
                             <td><button class="btn btn-danger btn-sm" onclick="deleteOrder('{{ order[0] }}')">Delete</button></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="dashboard-container mt-4">
+            <h2 class="text-center">Order History</h2>
+            <div id="order-history" class="table-responsive">
+                <table class="table table-bordered table-striped mt-3">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>MUT ID</th>
+                            <th>Copies</th>
+                            <th>Layout</th>
+                            <th>Print Type</th>
+                            <th>Print Sides</th>
+                            <th>Expected Date & Time</th>
+                            <th>File</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in order_history %}
+                        <tr>
+                            <td>{{ order[0] }}</td>
+                            <td>{{ order[1] }}</td>
+                            <td>{{ order[2] }}</td>
+                            <td>{{ order[3] }}</td>
+                            <td>{{ order[4] }}</td>
+                            <td>{{ order[5] }}</td>
+                            <td>{{ order[6] }}</td>
+                            <td><a href="{{ order[7] }}" target="_blank">View File</a></td>
+                            <td><span class="badge bg-secondary">{{ order[8] }}</span></td>
                         </tr>
                         {% endfor %}
                     </tbody>
