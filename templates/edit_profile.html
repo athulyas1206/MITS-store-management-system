@@ -6,7 +6,11 @@
     
     <!-- Profile Picture Section -->
     <div class="text-center mb-3">
+<<<<<<< Updated upstream
         <img src="{{ url_for('static', filename='profile_pics/' + (user['photo'] if user['photo'] else 'default_profile.png')) }}" 
+=======
+        <img src="{{ url_for('static', filename='profile_pics/' + (user[1] if user[1] else 'default_profile.png')) }}" 
+>>>>>>> Stashed changes
              alt="Profile Picture" class="img-fluid rounded-circle" width="200" height="200"><br>
 
         <!-- Upload New Photo -->
@@ -27,14 +31,22 @@
     <form method="POST">
         <div class="mb-3">
             <label for="email" class="form-label">Email:</label>
+<<<<<<< Updated upstream
             <input type="email" name="email" class="form-control" value="{{ user['email'] }}" required>
+=======
+            <input type="email" name="email" class="form-control" value="{{ user[0] }}" required>
+>>>>>>> Stashed changes
         </div>
 
         <!-- Old Password (Hidden by Default) -->
         <div class="mb-3">
             <label class="form-label">Old Password:</label>
             <div class="input-group">
+<<<<<<< Updated upstream
                 <input type="password" id="old_password" class="form-control" value="{{ user['password'] }}" disabled>
+=======
+                <input type="password" id="old_password" class="form-control" value="{{ user[2] }}" disabled>
+>>>>>>> Stashed changes
                 <button type="button" class="btn btn-secondary" onclick="toggleOldPassword()">👁 Show</button>
             </div>
         </div>

@@ -11,8 +11,14 @@ def create_user_db():
             password TEXT NOT NULL
         )
     ''')
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN photo TEXT DEFAULT 'static/profile_pics/default.jpg';")
+    except sqlite3.OperationalError:
+        print("Column 'photo' already exists.")
+
     conn.commit()   # Save changes
     conn.close() 
+
 
 def create_print_orders():
     conn = sqlite3.connect('print_orders.db')
@@ -55,12 +61,15 @@ def create_print_orders():
     conn.commit()   # Save changes
     conn.close() 
 
+<<<<<<< Updated upstream
 
 
 
 
 
 
+=======
+>>>>>>> Stashed changes
 
 if __name__ == '__main__':
     create_user_db()

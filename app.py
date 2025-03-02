@@ -192,10 +192,128 @@ def get_products():
     conn.close()
     return products
 
-@app.route('/stationary')
+
+@app.route('/stationary', methods=['GET'])
 def stationary():
-    products = get_products()
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Get category and search query from URL parameters
+    category = request.args.get('category', 'All')
+    search_query = request.args.get('search', '')
+
+    # Base query
+    query = "SELECT * FROM products"
+    params = []
+
+    # Apply filters if category or search is provided
+    if category and category != 'All':
+        query += " WHERE category = ?"
+        params.append(category)
+    
+    if search_query:
+        if 'WHERE' in query:
+            query += " AND name LIKE ?"
+        else:
+            query += " WHERE name LIKE ?"
+        params.append(f"%{search_query}%")
+
+    cursor.execute(query, params)
+    products = cursor.fetchall()
+    conn.close()
+
+    # Pass products to the template
     return render_template('stationary.html', products=products)
+
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (session['user_id'],))
+    user = cursor.fetchone()
+    conn.close()
+
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect('/login')
+
+    return render_template('profile.html', user=user)
+
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+def edit_profile():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT email, photo FROM users WHERE id=?", (session['user_id'],))
+    user = cursor.fetchone()
+    conn.close()
+
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        photo = request.files.get('photo')
+
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+
+        # Update email and password
+        cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, session['user_id']))
+
+        # Update or remove profile picture
+        if photo and photo.filename:
+            photo_filename = f"user_{session['user_id']}.jpg"
+            photo.save(os.path.join('static/profile_pics', photo_filename))
+            cursor.execute("UPDATE users SET photo=? WHERE id=?", (photo_filename, session['user_id']))
+        elif 'remove_photo' in request.form:
+            cursor.execute("UPDATE users SET photo=NULL WHERE id=?", (session['user_id'],))
+
+        conn.commit()
+        conn.close()
+
+        flash('Profile updated successfully!', 'success')
+        return redirect('/profile')
+
+    return render_template('edit_profile.html', user=user)
+
+@app.route('/remove_profile_photo', methods=['POST'])
+def remove_profile_photo():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET photo = 'default_profile.png' WHERE mut_id = ?", (session['mut_id'],))
+    conn.commit()
+    conn.close()
+    return redirect(('edit_profile'))
+
+
+
+@app.route('/orders')
+def orders():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Fetch Print Orders
+    cursor.execute("SELECT id, expected_datetime, status FROM print_orders WHERE mut_id=?", (session['mut_id'],))
+    print_orders = cursor.fetchall()
+
+    # Fetch Stationary Orders (to be implemented later)
+    cursor.execute("SELECT id, expected_datetime, status FROM stationary_orders WHERE mut_id=?", (session['mut_id'],))
+    stationary_orders = cursor.fetchall()
+
+    conn.close()
+
+    return render_template('orders.html', print_orders=print_orders, stationary_orders=stationary_orders)
 
 
 @app.route('/edit_profile', methods=['GET', 'POST'])

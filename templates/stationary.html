@@ -9,25 +9,78 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="text-center mb-4">Stationary Items</h1>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-light navbar-custom">
+        <div class="container-fluid">
+            <!-- Back Button -->
+            <a class="btn btn-outline-secondary" href="{{ url_for('home') }}">Back</a>
+
+            <!-- Search Bar -->
+            <form class="d-flex mx-auto" method="GET" action="{{ url_for('stationary') }}">
+                <input class="form-control me-2" type="search" placeholder="Search" name="search" aria-label="Search">
+                <button class="btn btn-outline-success" type="submit">Search</button>
+            </form>
+
+            <!-- Profile Icon -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img src="{{ url_for('static', filename='profile-icon.png') }}" alt="Profile" width="30" height="30">
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                    <li><a class="dropdown-item" href="{{ url_for('profile') }}">Profile</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('orders') }}">Orders</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Categories Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light nav-category">
+        <ul class="navbar-nav mx-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('stationary', category='All') }}">All</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('stationary', category='Pens') }}">Pens</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('stationary', category='Notebooks') }}">Notebooks</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('stationary', category='Markers') }}">Markers</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('stationary', category='Erasers') }}">Erasers</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('stationary', category='Pencils') }}">Pencils</a>
+            </li>
+            <!-- Add more categories as needed -->
+        </ul>
+    </nav>
+
+    <!-- Products Display -->
+    <div class="container mt-4">
         <div class="row">
             {% for product in products %}
-            <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <img src="{{ url_for('static', filename=product[3]) }}" class="card-img-top" alt="{{ product[0] }}">
+            <div class="col-md-3">
+                <div class="card">
+                    <img src="{{ url_for('static', filename= product.image) }}" class="card-img-top" alt="{{ product.name }}">
                     <div class="card-body">
-                        <h5 class="card-title">{{ product[0] }}</h5>
-                        <p class="card-text">{{ product[1] }}</p>
-                        <h6 class="card-subtitle mb-2 text-muted">Price: ₹{{ product[2] }}</h6>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text">{{ product.description }}</p>
+                        <p class="card-text"><strong>₹{{ product.price }}</strong></p>
+                        <a href="{{ url_for('add_to_cart', product_id=product.id) }}" class="btn btn-primary">Add to Cart</a>
+                        <a href="{{ url_for('buy_now', product_id=product.id) }}" class="btn btn-success">Buy Now</a>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
     </div>
-    <!-- Bootstrap JS (Optional for interactivity) -->
+
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
