@@ -52,6 +52,22 @@ def create_print_orders():
             date TEXT UNIQUE NOT NULL
         )
     ''')
+
+    # Create deleted_orders table to store deleted print orders
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS order_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mut_id TEXT NOT NULL,
+    copies INTEGER NOT NULL,
+    layout TEXT NOT NULL,
+    print_type TEXT NOT NULL,
+    print_sides TEXT NOT NULL,
+    expected_datetime TEXT NOT NULL
+     );
+        
+    ''')
+
     conn.commit()   # Save changes
     conn.close() 
 
@@ -108,8 +124,6 @@ def add_sample_products():
 
     conn.commit()   # Save changes
     conn.close()    # Close connection
-
-
 
 if __name__ == '__main__':
     create_user_db()

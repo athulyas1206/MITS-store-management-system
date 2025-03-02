@@ -93,8 +93,10 @@
                             <td><a href="{{ url_for('upload', filename='uploads/' + order[7]) }}" target="_blank">View PDF</a></td>
                             <td>
                                 <form action="{{ url_for('delete_order', order_id=order[0]) }}" method="post" style="display:inline;">
-                                    <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this order?');">Delete</button>
+                                    <button type="submit">Delete</button>
                                 </form>
+                                
+                                
                                 <td>
                                     <select class="status-dropdown" data-order-id="{{ order[0] }}">
                                         <option value="Pending" {% if order[8] == 'Pending' %} selected {% endif %}>Pending</option>
