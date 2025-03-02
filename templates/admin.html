@@ -1,11 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
     <style>
         body {
-            background-color: #f8f9fa;
+            font-family: 'Poppins', sans-serif;
+            background-color: #F8F9FA;
+        }
+        .hero {
+            background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #FACC15, #F59E0B);
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s ease-in-out;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            background: linear-gradient(45deg, #F59E0B, #D97706);
+        }
+        .navbar {
+            background: linear-gradient(135deg, #1E3A8A, #3B82F6);
         }
         .dashboard-container {
             max-width: 1200px;
@@ -14,11 +38,12 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            display: none;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">Admin Dashboard</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -26,8 +51,8 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="#orders">Orders</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#order-history">Order History</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="toggleOrders()">View Orders</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="toggleHistory()">Order History</a></li>
                     <li class="nav-item"><a class="nav-link" href="/login">Logout</a></li>
                 </ul>
             </div>
@@ -35,10 +60,11 @@
     </nav>
 
     <div class="container mt-4">
-        <div class="dashboard-container">
-            <h2 class="text-center">Orders</h2>
-            <div id="orders" class="table-responsive">
-                <table class="table table-bordered table-striped mt-3">
+        <div class="dashboard-container" id="ordersContainer">
+            <h2 class="text-center">View All Print Orders</h2>
+            <button class="btn btn-primary" onclick="sortTable('ordersTable', 6)">Sort by Date & Time</button>
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped mt-3" id="ordersTable">
                     <thead class="table-dark">
                         <tr>
                             <th>ID</th>
@@ -49,12 +75,13 @@
                             <th>Print Sides</th>
                             <th>Expected Date & Time</th>
                             <th>File</th>
-                            <th>Status</th>
                             <th>Action</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        {% for order in active_orders %}
+                        {% for order in orders %}
                         <tr id="order-{{ order[0] }}">
                             <td>{{ order[0] }}</td>
                             <td>{{ order[1] }}</td>
@@ -63,9 +90,20 @@
                             <td>{{ order[4] }}</td>
                             <td>{{ order[5] }}</td>
                             <td>{{ order[6] }}</td>
-                            <td><a href="{{ order[7] }}" target="_blank">View File</a></td>
-                            <td><span class="badge bg-success">{{ order[8] }}</span></td>
-                            <td><button class="btn btn-danger btn-sm" onclick="deleteOrder('{{ order[0] }}')">Delete</button></td>
+                            <td><a href="{{ url_for('upload', filename='uploads/' + order[7]) }}" target="_blank">View PDF</a></td>
+                            <td>
+                                <form action="{{ url_for('delete_order', order_id=order[0]) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this order?');">Delete</button>
+                                </form>
+                                <td>
+                                    <select class="status-dropdown" data-order-id="{{ order[0] }}">
+                                        <option value="Pending" {% if order[8] == 'Pending' %} selected {% endif %}>Pending</option>
+                                        <option value="Processing" {% if order[8] == 'Processing' %} selected {% endif %}>Processing</option>
+                                        <option value="Completed" {% if order[8] == 'Completed' %} selected {% endif %}>Completed</option>
+                                    </select>
+                                </td> 
+                            </td>
+                            
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -73,10 +111,10 @@
             </div>
         </div>
         
-        <div class="dashboard-container mt-4">
+        <div class="dashboard-container" id="orderHistoryContainer">
             <h2 class="text-center">Order History</h2>
-            <div id="order-history" class="table-responsive">
-                <table class="table table-bordered table-striped mt-3">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped mt-3" id="historyTable">
                     <thead class="table-dark">
                         <tr>
                             <th>ID</th>
@@ -85,23 +123,19 @@
                             <th>Layout</th>
                             <th>Print Type</th>
                             <th>Print Sides</th>
-                            <th>Expected Date & Time</th>
-                            <th>File</th>
-                            <th>Status</th>
+                            <th>Completed Date & Time</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for order in order_history %}
+                        {% for history in order_history %}
                         <tr>
-                            <td>{{ order[0] }}</td>
-                            <td>{{ order[1] }}</td>
-                            <td>{{ order[2] }}</td>
-                            <td>{{ order[3] }}</td>
-                            <td>{{ order[4] }}</td>
-                            <td>{{ order[5] }}</td>
-                            <td>{{ order[6] }}</td>
-                            <td><a href="{{ order[7] }}" target="_blank">View File</a></td>
-                            <td><span class="badge bg-secondary">{{ order[8] }}</span></td>
+                            <td>{{ history[0] }}</td>
+                            <td>{{ history[1] }}</td>
+                            <td>{{ history[2] }}</td>
+                            <td>{{ history[3] }}</td>
+                            <td>{{ history[4] }}</td>
+                            <td>{{ history[5] }}</td>
+                            <td>{{ history[6] }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -110,14 +144,23 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function deleteOrder(orderId) {
-            let row = document.getElementById("order-" + orderId);
-            if (confirm("Are you sure you want to delete this order?")) {
-                row.remove();
-            }
+        function toggleOrders() {
+            document.getElementById("ordersContainer").style.display = "block";
+            document.getElementById("orderHistoryContainer").style.display = "none";
+        }
+        function toggleHistory() {
+            document.getElementById("ordersContainer").style.display = "none";
+            document.getElementById("orderHistoryContainer").style.display = "block";
+        }
+        function sortTable(tableId, colIndex) {
+            let table = document.getElementById(tableId);
+            let rows = Array.from(table.rows).slice(1);
+            rows.sort((a, b) => new Date(a.cells[colIndex].innerText) - new Date(b.cells[colIndex].innerText));
+            rows.forEach(row => table.appendChild(row));
         }
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

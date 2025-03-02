@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, flash, session
+from flask import Flask, render_template, request, redirect, flash, session,url_for,jsonify
+from werkzeug.utils import secure_filename
 import sqlite3
 import os
 from datetime import datetime
@@ -58,12 +59,47 @@ def admin_dashboard():
     # Fetch all print orders from the database
     conn = sqlite3.connect('print_orders.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM print_orders')
+    cursor.execute('SELECT * FROM print_orders ORDER BY expected_datetime DESC')
     orders = cursor.fetchall()
+    
+    # Fetch completed orders (order history)
+    cursor.execute("SELECT * FROM print_orders")
+    order_history = cursor.fetchall()
     conn.close()
 
-    return render_template('admin.html', orders=orders)
-                           
+    return render_template('admin.html', orders=orders ,order_history=order_history)
+
+@app.route('/delete_order/<int:order_id>', methods=['POST'])
+def delete_order(order_id):
+    if session.get('mut_id') != 'admin':
+        flash('Unauthorized action.', 'danger')
+        return redirect('/admin_dashboard')
+
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM print_orders WHERE id = ?', (order_id,))
+    conn.commit()
+    conn.close()
+
+    flash('Order deleted successfully.', 'success')
+    return redirect('/admin_dashboard')
+
+@app.route('/update_status', methods=['POST'])
+def update_status():
+        order_id = request.form['order_id']
+        new_status = request.form['status']
+
+        conn = sqlite3.connect("your_database.db")
+        cursor = conn.cursor()
+        cursor.execute("UPDATE print_orders SET status = ? WHERE id = ?", (new_status, order_id))
+        conn.commit()
+        conn.close()
+
+        
+@app.route('/upload/<filename>')
+def upload(filename):
+    return f"File {filename} uploaded successfully!"
+
 def register():
     if request.method == 'POST':
         mut_id = request.form['mut_id']
@@ -94,6 +130,8 @@ def register():
             conn.close()
 
     return render_template('register.html')
+
+
 
 @app.route('/home')
 def home():
