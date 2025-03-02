@@ -244,44 +244,7 @@ def profile():
     return render_template('profile.html', user=user)
 
 
-@app.route('/edit_profile', methods=['GET', 'POST'])
-def edit_profile():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
 
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT email, photo FROM users WHERE id=?", (session['user_id'],))
-    user = cursor.fetchone()
-    conn.close()
-
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        photo = request.files.get('photo')
-
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-
-        # Update email and password
-        cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, session['user_id']))
-
-        # Update or remove profile picture
-        if photo and photo.filename:
-            photo_filename = f"user_{session['user_id']}.jpg"
-            photo.save(os.path.join('static/profile_pics', photo_filename))
-            cursor.execute("UPDATE users SET photo=? WHERE id=?", (photo_filename, session['user_id']))
-        elif 'remove_photo' in request.form:
-            cursor.execute("UPDATE users SET photo=NULL WHERE id=?", (session['user_id'],))
-
-        conn.commit()
-        conn.close()
-
-        flash('Profile updated successfully!', 'success')
-        return redirect('/profile')
-
-    return render_template('edit_profile.html', user=user)
 
 @app.route('/remove_profile_photo', methods=['POST'])
 def remove_profile_photo():
@@ -357,14 +320,6 @@ def edit_profile():
     conn.close()
 
     return render_template('edit_profile.html', user=user)
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
