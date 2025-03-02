@@ -6,7 +6,7 @@
     
     <!-- Profile Picture Section -->
     <div class="text-center mb-3">
-        <img src="{{ url_for('static', filename='profile_pics/' + (user[1] if user[1] else 'default_profile.png')) }}" 
+        <img src="{{ url_for('static', filename='profile_pics/' + (user['photo'] if user['photo'] else 'default_profile.png')) }}" 
              alt="Profile Picture" class="img-fluid rounded-circle" width="200" height="200"><br>
 
         <!-- Upload New Photo -->

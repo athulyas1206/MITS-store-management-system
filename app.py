@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, flash, session
+from flask import Flask, render_template, request, redirect, flash, session, url_for
+from werkzeug.utils import secure_filename
 import sqlite3
 import os
 from datetime import datetime
@@ -10,6 +11,12 @@ app.secret_key = 'your_secret_key'  # Required for session management
 
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+UPLOAD_FOLDER = 'static/profile_pics'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def validate_user(mut_id, password):
     conn = sqlite3.connect('users.db')
@@ -185,11 +192,134 @@ def get_products():
     conn.close()
     return products
 
-@app.route('/stationary')
+
+@app.route('/stationary', methods=['GET'])
 def stationary():
-    products = get_products()
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Get category and search query from URL parameters
+    category = request.args.get('category', 'All')
+    search_query = request.args.get('search', '')
+
+    # Base query
+    query = "SELECT * FROM products"
+    params = []
+
+    # Apply filters if category or search is provided
+    if category and category != 'All':
+        query += " WHERE category = ?"
+        params.append(category)
+    
+    if search_query:
+        if 'WHERE' in query:
+            query += " AND name LIKE ?"
+        else:
+            query += " WHERE name LIKE ?"
+        params.append(f"%{search_query}%")
+
+    cursor.execute(query, params)
+    products = cursor.fetchall()
+    conn.close()
+
+    # Pass products to the template
     return render_template('stationary.html', products=products)
 
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (session['user_id'],))
+    user = cursor.fetchone()
+    conn.close()
+
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect('/login')
+
+    return render_template('profile.html', user=user)
+
+
+
+
+@app.route('/remove_profile_photo', methods=['POST'])
+def remove_profile_photo():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET photo = 'default_profile.png' WHERE mut_id = ?", (session['mut_id'],))
+    conn.commit()
+    conn.close()
+    return redirect(('edit_profile'))
+
+
+
+@app.route('/orders')
+def orders():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Fetch Print Orders
+    cursor.execute("SELECT id, expected_datetime, status FROM print_orders WHERE mut_id=?", (session['mut_id'],))
+    print_orders = cursor.fetchall()
+
+    # Fetch Stationary Orders (to be implemented later)
+    cursor.execute("SELECT id, expected_datetime, status FROM stationary_orders WHERE mut_id=?", (session['mut_id'],))
+    stationary_orders = cursor.fetchall()
+
+    conn.close()
+
+    return render_template('orders.html', print_orders=print_orders, stationary_orders=stationary_orders)
+
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+def edit_profile():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    user_id = session['user_id']
+
+    # Connect to the database
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        photo = request.files['photo']
+
+        # Update profile picture if a new one is uploaded
+        if photo and allowed_file(photo.filename):
+            filename = secure_filename(f"{user_id}_{photo.filename}")
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo.save(photo_path)
+
+            # Save file path in the database
+            cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
+
+        # Update email and password
+        cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, user_id))
+
+        conn.commit()
+        conn.close()
+
+        flash('Profile updated successfully!', 'success')
+        return redirect('/edit_profile')
+
+    # Fetch current user data
+    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+
+    return render_template('edit_profile.html', user=user)
 
 
 if __name__ == '__main__':
