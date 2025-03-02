@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, flash, session
+from flask import Flask, render_template, request, redirect, flash, session, url_for
+from werkzeug.utils import secure_filename
 import sqlite3
 import os
 from datetime import datetime
@@ -10,6 +11,12 @@ app.secret_key = 'your_secret_key'  # Required for session management
 
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+UPLOAD_FOLDER = 'static/profile_pics'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def validate_user(mut_id, password):
     conn = sqlite3.connect('users.db')
@@ -189,6 +196,56 @@ def get_products():
 def stationary():
     products = get_products()
     return render_template('stationary.html', products=products)
+
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+def edit_profile():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    user_id = session['user_id']
+
+    # Connect to the database
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        photo = request.files['photo']
+
+        # Update profile picture if a new one is uploaded
+        if photo and allowed_file(photo.filename):
+            filename = secure_filename(f"{user_id}_{photo.filename}")
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo.save(photo_path)
+
+            # Save file path in the database
+            cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
+
+        # Update email and password
+        cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, user_id))
+
+        conn.commit()
+        conn.close()
+
+        flash('Profile updated successfully!', 'success')
+        return redirect('/edit_profile')
+
+    # Fetch current user data
+    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+
+    return render_template('edit_profile.html', user=user)
+
+
+
+
+
+
+
 
 
 
