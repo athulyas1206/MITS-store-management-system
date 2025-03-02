@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -46,7 +47,8 @@
             font-weight: bold;
         }
 
-        .form-control, .form-select {
+        .form-control,
+        .form-select {
             border: 2px solid #ced4da;
             padding: 10px;
             border-radius: 5px;
@@ -71,6 +73,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container mt-4">
         <div class="hero">
@@ -110,6 +113,7 @@
                 <label for="expected_datetime" class="form-label">Expected Date & Time</label>
                 <input type="datetime-local" class="form-control" id="expected_datetime" name="expected_datetime" required>
             </div>
+
             <div class="mb-3 position-relative">
                 <label for="pdf_upload" class="form-label">Upload PDF</label>
                 <div class="input-group">
@@ -132,30 +136,78 @@
             </div>
         </form>
     </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const pdfUpload = document.getElementById("pdf_upload");
-            const viewButton = document.getElementById("view_pdf");
-            const cancelButton = document.getElementById("cancel_pdf");
+            const datetimeInput = document.getElementById("expected_datetime");
 
-            pdfUpload.addEventListener("change", function (event) {
+            function formatDateTime(date) {
+                let year = date.getFullYear();
+                let month = String(date.getMonth() + 1).padStart(2, '0');
+                let day = String(date.getDate()).padStart(2, '0');
+                let hours = String(date.getHours()).padStart(2, '0');
+                let minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+
+            function updateDateTimePicker() {
+                let now = new Date();
+                now.setMinutes(now.getMinutes() + 5);  // Set minimum selectable time to 5 minutes from now
+
+                 // Allow selecting date for today and the next two days
+
+                
+                if (datetimeInput.value < datetimeInput.min || datetimeInput.value > datetimeInput.max) {
+                    datetimeInput.value = datetimeInput.min;
+                }
+            }
+
+            function validateTimeInput(event) {
+                let selectedDate = new Date(event.target.value);
+                let minDate = new Date(datetimeInput.min);
+                let maxDate = new Date(datetimeInput.max);
+
+                let selectedHour = selectedDate.getHours();
+                let selectedMinutes = selectedDate.getMinutes();
+
+                let isValidTime = (selectedHour > 9 || (selectedHour === 9 && selectedMinutes >= 30)) &&
+                                  (selectedHour < 16 || (selectedHour === 16 && selectedMinutes <= 30));
+
+                if (selectedDate < minDate || selectedDate > maxDate || !isValidTime) {
+                    alert("Please select a time between 9:30 AM and 4:30 PM and at least 5 minutes from now.");
+                    datetimeInput.value = datetimeInput.min;
+                }
+            }
+
+            datetimeInput.addEventListener("change", function(event) {
+                validateTimeInput(event);
+            });
+
+            updateDateTimePicker();
+
+            document.getElementById("pdf_upload").addEventListener("change", function(event) {
                 let file = event.target.files[0];
+                let viewButton = document.getElementById("view_pdf");
+                let cancelButton = document.getElementById("cancel_pdf");
+
                 if (file) {
                     viewButton.style.display = "inline-block";
                     cancelButton.style.display = "inline-block";
-                    viewButton.onclick = function () {
+                    viewButton.onclick = function() {
                         let fileURL = URL.createObjectURL(file);
                         window.open(fileURL, "_blank");
                     };
                 }
             });
 
-            cancelButton.addEventListener("click", function () {
-                pdfUpload.value = "";
-                viewButton.style.display = "none";
-                cancelButton.style.display = "none";
+            document.getElementById("cancel_pdf").addEventListener("click", function() {
+                let fileInput = document.getElementById("pdf_upload");
+                fileInput.value = "";
+                document.getElementById("view_pdf").style.display = "none";
+                document.getElementById("cancel_pdf").style.display = "none";
             });
         });
     </script>
 </body>
+
 </html>

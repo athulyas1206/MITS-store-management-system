@@ -30,11 +30,6 @@ def login():
         mut_id = request.form['mut_id']
         password = request.form['password']
 
-        if mut_id == 'admin' and password == 'admin':  # Change to a secure password
-            session['mut_id'] = 'admin'
-            flash('Admin login successful!', 'success')
-            return redirect('/admin_dashboard')
-
         user = validate_user(mut_id, password)
         if user:
             session['user_id'] = user[0]  # Store user ID in session
@@ -45,23 +40,6 @@ def login():
             flash('Invalid MUT ID or Password. Try again.', 'danger')
 
     return render_template('login.html')
-
-
-@app.route('/admin_dashboard')
-def admin_dashboard():
-    # Check if the user is admin
-    if session.get('mut_id') != 'admin':
-        flash('Unauthorized access.', 'danger')
-        return redirect('/login')
-
-    # Fetch all print orders from the database
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM print_orders')
-    orders = cursor.fetchall()
-    conn.close()
-
-    return render_template('admin.html', orders=orders)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -176,19 +154,7 @@ def order_summary():
     else:
         flash('No order found.', 'danger')
         return redirect('/print_orders')
-    
-def get_products():
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT name, description, price, image FROM products")
-    products = cursor.fetchall()
-    conn.close()
-    return products
 
-@app.route('/stationary')
-def stationary():
-    products = get_products()
-    return render_template('stationary.html', products=products)
 
 
 
