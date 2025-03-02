@@ -55,64 +55,13 @@ def create_print_orders():
     conn.commit()   # Save changes
     conn.close() 
 
-def initialize_db():
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
 
-    # Create Products Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT,
-            price REAL NOT NULL,
-            image TEXT,
-            category TEXT,
-            stock INTEGER NOT NULL
-        );
-    ''')
 
-    # Create Transactions Table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
-            product_id INTEGER NOT NULL,
-            quantity INTEGER NOT NULL,
-            purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (product_id) REFERENCES products(id)
-        );
-    ''')
 
-    conn.commit()
-    conn.close()
 
-def add_sample_products():
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-
-    # Sample Data for Products Table
-    sample_products = [
-        ('Pen', 'Ballpoint pen with smooth ink flow', 10.0, 'pen.jpg', 'Stationary', 100),
-        ('Notebook', 'A5 size notebook with ruled pages', 50.0, 'notebook.jpg', 'Stationary', 50),
-        ('Marker', 'Permanent marker with bold ink', 30.0, 'marker.jpg', 'Stationary', 80),
-        ('Eraser', 'Non-dust eraser for clean erasing', 5.0, 'eraser.jpg', 'Stationary', 200),
-        ('Pencil', 'HB graphite pencil', 3.0, 'pencil.jpg', 'Stationary', 150)
-    ]
-
-    # Insert Sample Data
-    cursor.executemany('''
-        INSERT INTO products (name, description, price, image, category, stock)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', sample_products)
-
-    conn.commit()   # Save changes
-    conn.close()    # Close connection
 
 
 
 if __name__ == '__main__':
     create_user_db()
     create_print_orders()
-    initialize_db()
-    add_sample_products()
