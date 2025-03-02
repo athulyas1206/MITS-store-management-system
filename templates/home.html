@@ -6,45 +6,83 @@
     <title>Home - MITS Store Management</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #F8F9FA;
+        }
+        .hero {
+            background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #FACC15, #F59E0B);
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s ease-in-out;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            background: linear-gradient(45deg, #F59E0B, #D97706);
+        }
+        .content-section {
+            padding: 40px 0;
+            text-align: center;
+        }
+        .card {
+            border-radius: 10px;
+            transition: all 0.3s ease-in-out;
+        }
+        .print-orders-card {
+        background: linear-gradient(45deg, #FACC15, #F59E0B);
+        color: white;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+        .navbar {
+            background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+        }
+        .navbar .btn-secondary {
+            background-color: #fbfcfd;
+            border: none;
+        }
+    </style>
+    
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#">MITS Store</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <a class="navbar-brand fw-bold" href="#">MITS Store</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <!-- Back Button -->
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a href="/login" class="btn btn-secondary back-button">← Back</a>
-                    </li>
-    
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/print_orders">Print Orders</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Stationary</a>
+                        <a class="nav-link active" href="#">Home</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav">
                     <!-- Profile Icon with Dropdown -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle"></i> Profile
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#">View Profile</a></li>
+                            <li><a class="dropdown-item" href="/login">Back</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/logout">Log Out</a></li>
                         </ul>
@@ -54,12 +92,45 @@
         </div>
     </nav>
 
-    
+    <!-- Hero Section -->
+    <div class="container mt-4">
+        <div class="hero">
+            <h1 class="fw-bold">Welcome to MITS Store</h1>
+            <p class="lead">Your one-stop shop for prints, stationery, and more.</p>
+        </div>
+    </div>
 
-    <!-- Main Content -->
-    <div class="container mt-5">
-        <h1>Welcome to MITS Store Management</h1>
-        
+    <!-- Main Content Sections -->
+    <div class="container">
+        <div class="row content-section">
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-info-circle"></i> About Us</h5>
+                        <p class="card-text">Learn more about MITS Store and our commitment to serving students.</p>
+                        <a href="about.html" class="btn btn-primary">Learn More</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-printer"></i> Print Orders</h5>
+                        <p class="card-text">Easily place and manage your print orders with quick processing.</p>
+                        <a href="/print_orders" class="btn btn-primary">Place Orders</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-shop"></i> Stationery</h5>
+                        <p class="card-text">Browse and purchase essential stationery items with ease.</p>
+                        <a href="stationary.html" class="btn btn-primary">Explore and place</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Bootstrap JS -->
