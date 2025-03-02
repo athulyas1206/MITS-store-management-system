@@ -87,6 +87,15 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect('/login')
 
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+@app.route('/stationary')
+def stationary():
+    return render_template('stationary.html')
+
+
 @app.route('/print_orders', methods=['GET', 'POST'])
 def create_print_orders():
     if request.method == 'POST':
@@ -154,8 +163,6 @@ def order_summary():
     else:
         flash('No order found.', 'danger')
         return redirect('/print_orders')
-
-
 
 
 if __name__ == '__main__':
