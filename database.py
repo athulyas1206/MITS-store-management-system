@@ -54,7 +54,6 @@ def create_print_orders():
     ''')
 
     # Create deleted_orders table to store deleted print orders
-
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS order_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,7 +62,10 @@ def create_print_orders():
     layout TEXT NOT NULL,
     print_type TEXT NOT NULL,
     print_sides TEXT NOT NULL,
-    expected_datetime TEXT NOT NULL
+    expected_datetime TEXT NOT NULL,
+    pdf_filename TEXT NOT NULL,
+    num_pages INTEGER NOT NULL,
+    total_cost REAL NOT NULL
      );
         
     ''')
