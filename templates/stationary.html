@@ -3,31 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stationary</title>
+    <title>Stationery - MITS Store</title>
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #F8F9FA;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+        }
+        .navbar .btn-secondary {
+            background-color: #fbfcfd;
+            border: none;
+        }
+        .hero {
+            background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #FACC15, #F59E0B);
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s ease-in-out;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+            background: linear-gradient(45deg, #F59E0B, #D97706);
+        }
+        .card {
+            border-radius: 8px;
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+            max-width: 280px;
+            margin: auto;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+        }
+        .card img {
+            height: 160px;
+            object-fit: contain;
+        }
+        .card-body {
+            padding: 15px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="text-center mb-4">Stationary Items</h1>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/">MITS Store</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> Profile
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                           <!-- <li><a class="dropdown-item" href="#">View Profile</a></li>-->
+                            <li><a class="dropdown-item" href="/home">Back</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout">Log Out</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="container mt-4">
+        <div class="hero">
+            <h1 class="fw-bold">Stationery Items</h1>
+            <p class="lead">Find all your essential stationery needs here.</p>
+        </div>
+    </div>
+
+    <!-- Stationery Items -->
+    <div class="container">
         <div class="row">
             {% for product in products %}
-            <div class="col-md-4 mb-4">
+            <div class="col-md-3 mb-4 d-flex justify-content-center">
                 <div class="card h-100">
                     <img src="{{ url_for('static', filename=product[3]) }}" class="card-img-top" alt="{{ product[0] }}">
-                    <div class="card-body">
+                    <div class="card-body text-center">
                         <h5 class="card-title">{{ product[0] }}</h5>
                         <p class="card-text">{{ product[1] }}</p>
                         <h6 class="card-subtitle mb-2 text-muted">Price: ₹{{ product[2] }}</h6>
-                        <a href="#" class="btn btn-primary">Add to Cart</a>
+                        <a href="#" class="btn btn-primary w-100"><i class="bi bi-cart-plus"></i> Add to Cart</a>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
     </div>
-    <!-- Bootstrap JS (Optional for interactivity) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
