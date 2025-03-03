@@ -61,15 +61,6 @@ def create_print_orders():
     conn.commit()   # Save changes
     conn.close() 
 
-<<<<<<< Updated upstream
-
-
-
-
-
-
-=======
->>>>>>> Stashed changes
 
 if __name__ == '__main__':
     create_user_db()
