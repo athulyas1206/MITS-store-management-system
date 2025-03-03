@@ -4,6 +4,7 @@ import sqlite3
 import os
 from datetime import datetime
 from PyPDF2 import PdfReader
+import random
 
 
 app = Flask(__name__)
@@ -54,6 +55,36 @@ def login():
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        mut_id = request.form['mut_id']
+        email = request.form['email']
+        password = request.form['password']
+
+        try:
+            # Connect with timeout to wait for the lock to release
+            conn = sqlite3.connect('users.db', timeout=10)
+            cursor = conn.cursor()
+            
+            # Insert new user
+            cursor.execute('INSERT INTO users (mut_id, email, password) VALUES (?, ?, ?)', (mut_id, email, password))
+            
+            # Commit the transaction
+            conn.commit()
+            flash('Registration successful! You can now log in.', 'success')
+            return redirect('/login')
+        except sqlite3.IntegrityError:
+            flash('MUT ID or Email already exists.', 'danger')
+        
+        except sqlite3.OperationalError as e:
+            flash('Database error: {}'.format(e), 'danger')
+        
+        finally:
+            # Close cursor and connection properly
+            cursor.close()
+            conn.close()
+
+    return render_template('register.html')
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -93,36 +124,7 @@ def update_status():
 def upload(filename):
     return f"File {filename} uploaded successfully!"
 
-def register():
-    if request.method == 'POST':
-        mut_id = request.form['mut_id']
-        email = request.form['email']
-        password = request.form['password']
 
-        try:
-            # Connect with timeout to wait for the lock to release
-            conn = sqlite3.connect('users.db', timeout=10)
-            cursor = conn.cursor()
-            
-            # Insert new user
-            cursor.execute('INSERT INTO users (mut_id, email, password) VALUES (?, ?, ?)', (mut_id, email, password))
-            
-            # Commit the transaction
-            conn.commit()
-            flash('Registration successful! You can now log in.', 'success')
-            return redirect('/login')
-        except sqlite3.IntegrityError:
-            flash('MUT ID or Email already exists.', 'danger')
-        
-        except sqlite3.OperationalError as e:
-            flash('Database error: {}'.format(e), 'danger')
-        
-        finally:
-            # Close cursor and connection properly
-            cursor.close()
-            conn.close()
-
-    return render_template('register.html')
 
 
 
@@ -143,10 +145,6 @@ def logout():
 @app.route('/about')
 def about():
     return render_template('about.html')
-
-@app.route('/stationary')
-def stationary():
-    return render_template('stationary.html')
 
 
 @app.route('/print_orders', methods=['GET', 'POST'])
@@ -351,6 +349,21 @@ def edit_profile():
     conn.close()
 
     return render_template('edit_profile.html', user=user)
+
+@app.route('/stationary')
+def stationary():
+    # Connect to the database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+    
+    # Fetch all stationary items
+    cursor.execute("SELECT id, name, category, price, stock, image_url, description FROM stationary_items")
+    items = cursor.fetchall()
+    
+    # Close connection
+    conn.close()
+    
+    return render_template('stationary.html', items=items)
 
 
 if __name__ == '__main__':
