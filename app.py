@@ -53,7 +53,7 @@ def login():
 
     return render_template('login.html')
 
-@app.route('/register', methods=['GET', 'POST'])
+
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -93,6 +93,7 @@ def update_status():
 def upload(filename):
     return f"File {filename} uploaded successfully!"
 
+@app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         mut_id = request.form['mut_id']
@@ -123,8 +124,6 @@ def register():
             conn.close()
 
     return render_template('register.html')
-
-
 
 @app.route('/home')
 def home():
