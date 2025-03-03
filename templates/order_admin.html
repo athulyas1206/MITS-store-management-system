@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pending Orders</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">Pending Orders</h2>
+        <a href="/order-history" class="btn btn-primary mb-3">View Order History</a>
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>MUT ID</th>
+                    <th>Copies</th>
+                    <th>Layout</th>
+                    <th>Print Type</th>
+                    <th>Print Sides</th>
+                    <th>Expected Date & Time</th>
+                    <th>File</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order["id"] }}</td>
+                    <td>{{ order["mut_id"] }}</td>
+                    <td>{{ order["copies"] }}</td>
+                    <td>{{ order["layout"] }}</td>
+                    <td>{{ order["print_type"] }}</td>
+                    <td>{{ order["print_sides"] }}</td>
+                    <td>{{ order["expected_date_time"] }}</td>
+                    <td><a href="{{ order['file_link'] }}" target="_blank">View File</a></td>
+                    <td><span class="badge bg-warning">{{ order["status"] }}</span></td>
+                    <td>
+                    <td><button class="btn btn-danger btn-sm" onclick="deleteOrder('{{ order[0] }}')">Delete</button></td>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function deleteOrder(orderId) {
+            if (confirm("Are you sure you want to delete this order?")) {
+                fetch(`/delete-order/${orderId}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                            location.reload();
+                        } else {
+                            alert("Failed to delete the order.");
+                        }
+                    })
+                    .catch(error => console.error("Error:", error));
+            }
+        }
+    </script>
+</body>
+</html>

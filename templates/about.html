@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About MITS Store Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 80px auto 60px auto; /* Prevent content overlap with fixed header/footer */
+            overflow: hidden;
+        }
+        header {
+            background: #004080;
+            color: #fff;
+            padding: 15px 0;
+            text-align: center;
+            font-size: 24px;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+        .back-button {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #f8f9fa;
+            color: #004080;
+            border: 1px solid #004080;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .back-button:hover {
+            background: #004080;
+            color: #fff;
+        }
+        section {
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        h2 {
+            color: #004080;
+        }
+        p {
+            line-height: 1.6;
+        }
+        footer {
+            text-align: center;
+            padding: 15px;
+            background: #004080;
+            color: #fff;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        MITS Store Management
+        <a href="/home" class="back-button">Back to Home</a>
+    </header>
+    <div class="container">
+        <section>
+            <h2>About Us</h2>
+            <p>
+                MITS Store is a smart and efficient solution designed to streamline document printing and
+                stationery item recommendations for MITS students. Our platform enables students to upload their documents,
+                track printing status, and receive AI-based insights on peak service hours, reducing wait times and enhancing
+                user convenience.
+            </p>
+        </section>
+        <section>
+            <h2>Our Mission</h2>
+            <p>
+                Our goal is to provide a seamless experience for students by integrating AI-driven analytics to optimize
+                print store operations, ensuring efficiency and convenience for all users.
+            </p>
+        </section>
+        <section>
+            <h2>Contact Us</h2>
+            <p>Email: mitsstoremanager@gmail.com</p>
+        </section>
+    </div>
+    <footer>
+        &copy; 2025 MITS Store. All rights reserved.
+    </footer>
+</body>
+</html>

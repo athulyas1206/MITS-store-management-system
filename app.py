@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash, session, url_for
+from flask import Flask, render_template, request, redirect, flash, session,url_for,jsonify,flash
 from werkzeug.utils import secure_filename
 import sqlite3
 import os
@@ -53,6 +53,7 @@ def login():
 
     return render_template('login.html')
 
+@app.route('/register', methods=['GET', 'POST'])
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -64,13 +65,34 @@ def admin_dashboard():
     # Fetch all print orders from the database
     conn = sqlite3.connect('print_orders.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM print_orders')
+    cursor.execute('SELECT * FROM print_orders ORDER BY expected_datetime DESC')
     orders = cursor.fetchall()
+    
+    # Fetch completed orders (order history)
+    cursor.execute("SELECT * FROM print_orders")
+    order_history = cursor.fetchall()
     conn.close()
 
-    return render_template('admin.html', orders=orders)
+    return render_template('admin.html', orders=orders ,order_history=order_history)
 
-@app.route('/register', methods=['GET', 'POST'])
+
+
+@app.route('/update_status', methods=['POST'])
+def update_status():
+        order_id = request.form['order_id']
+        new_status = request.form['status']
+
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
+        cursor.execute("UPDATE print_orders SET status = ? WHERE id = ?", (new_status, order_id))
+        conn.commit()
+        conn.close()
+
+        
+@app.route('/upload/<filename>')
+def upload(filename):
+    return f"File {filename} uploaded successfully!"
+
 def register():
     if request.method == 'POST':
         mut_id = request.form['mut_id']
@@ -102,6 +124,8 @@ def register():
 
     return render_template('register.html')
 
+
+
 @app.route('/home')
 def home():
     if 'user_id' in session:
@@ -115,6 +139,15 @@ def logout():
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect('/login')
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+@app.route('/stationary')
+def stationary():
+    return render_template('stationary.html')
+
 
 @app.route('/print_orders', methods=['GET', 'POST'])
 def create_print_orders():
@@ -183,47 +216,45 @@ def order_summary():
     else:
         flash('No order found.', 'danger')
         return redirect('/print_orders')
-    
-def get_products():
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT name, description, price, image FROM products")
-    products = cursor.fetchall()
-    conn.close()
-    return products
 
-
-@app.route('/stationary', methods=['GET'])
-def stationary():
+@app.route('/delete_order/<int:order_id>', methods=['POST'])
+def delete_order(order_id):
     conn = sqlite3.connect('print_orders.db')
     cursor = conn.cursor()
 
-    # Get category and search query from URL parameters
-    category = request.args.get('category', 'All')
-    search_query = request.args.get('search', '')
+    # ✅ Retrieve the order details before deleting
+    cursor.execute("SELECT mut_id, copies, layout, print_type, print_sides, expected_datetime FROM print_orders WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
 
-    # Base query
-    query = "SELECT * FROM products"
-    params = []
+    if order:
+        # ✅ Print query for debugging
+        print("Order found:", order)
 
-    # Apply filters if category or search is provided
-    if category and category != 'All':
-        query += " WHERE category = ?"
-        params.append(category)
-    
-    if search_query:
-        if 'WHERE' in query:
-            query += " AND name LIKE ?"
-        else:
-            query += " WHERE name LIKE ?"
-        params.append(f"%{search_query}%")
+        # ✅ Insert into order_history (columns must match exactly)
+        cursor.execute("""
+            INSERT INTO order_history (mut_id, copies, layout, print_type, print_sides, expected_datetime)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, order)
 
-    cursor.execute(query, params)
-    products = cursor.fetchall()
+        conn.commit()  # Commit after inserting into history
+
+        # ✅ Now delete only from print_orders
+        cursor.execute("DELETE FROM print_orders WHERE id = ?", (order_id,))
+        conn.commit()  # Commit the deletion
+
     conn.close()
+    return redirect(url_for('admin_dashboard'))
 
-    # Pass products to the template
-    return render_template('stationary.html', products=products)
+@app.route('/order_history')
+def order_history():
+    conn = sqlite3.connect("print_orders.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM order_history ORDER BY deleted_at DESC")
+    orders = cursor.fetchall()
+    conn.close()
+    return render_template("admin.html", orders=orders)
+
+
 
 @app.route('/profile')
 def profile():

@@ -1,94 +1,93 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Print Orders</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #F8F9FA;
+        }
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const datetimeInput = document.getElementById("expected_datetime");
+        .navbar {
+            background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+        }
 
-            function isSecondOrFourthSaturday(date) {
-                let day = date.getDay(); // 6 = Saturday
-                let dateNum = date.getDate();
-                return day === 6 && (dateNum > 7 && dateNum <= 14 || dateNum > 21 && dateNum <= 28);
-            }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            max-width: 1000px;
+            margin: auto;
+            margin-top: 40px;
+        }
 
-            function getValidDateTimes() {
-                let today = new Date();
-                let validDateTimes = [];
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1E3A8A, #3B82F6);
+            color: white;
+            padding: 50px 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
 
-                for (let i = 0; validDateTimes.length < 3; i++) {
-                    let checkDate = new Date();
-                    checkDate.setDate(today.getDate() + i);
+        h2 {
+            color: #1E3A8A;
+            font-weight: bold;
+            text-align: center;
+        }
 
-                    let day = checkDate.getDay(); // 0 = Sunday, 6 = Saturday
+        .form-label {
+            font-weight: bold;
+        }
 
-                    if (day === 0 || isSecondOrFourthSaturday(checkDate)) continue; // Skip Sundays & 2nd/4th Saturdays
-                    validDateTimes.push(checkDate);
-                }
+        .form-control,
+        .form-select {
+            border: 2px solid #ced4da;
+            padding: 10px;
+            border-radius: 5px;
+        }
 
-                return validDateTimes;
-            }
+        .btn-primary {
+            background: linear-gradient(45deg, #FACC15, #F59E0B);
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s ease-in-out;
+        }
 
-            function updateDateTimePicker() {
-                let validDates = getValidDateTimes();
-                let today = new Date();
-                let nowHours = today.getHours();
-                let nowMinutes = today.getMinutes();
+        .btn-primary:hover {
+            transform: scale(1.05);
+            background: linear-gradient(45deg, #F59E0B, #D97706);
+        }
 
-                let minDateTime, maxDateTime;
-
-                // Set min datetime: If today, use current time; else 9:00 AM
-                if (validDates[0].toDateString() === today.toDateString()) {
-                    let minHours = Math.max(9, nowHours);
-                    let minMinutes = minHours === nowHours ? nowMinutes : 0;
-                    minDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), minHours, minMinutes);
-                } else {
-                    minDateTime = new Date(validDates[0].getFullYear(), validDates[0].getMonth(), validDates[0].getDate(), 9, 0);
-                }
-
-                // Set max datetime: Always 4:30 PM on last valid day
-                maxDateTime = new Date(validDates[2].getFullYear(), validDates[2].getMonth(), validDates[2].getDate(), 16, 30);
-
-                // Format min/max datetime for HTML datetime-local input
-                function formatDateTime(date) {
-                    let year = date.getFullYear();
-                    let month = String(date.getMonth() + 1).padStart(2, '0');
-                    let day = String(date.getDate()).padStart(2, '0');
-                    let hours = String(date.getHours()).padStart(2, '0');
-                    let minutes = String(date.getMinutes()).padStart(2, '0');
-                    return `${year}-${month}-${day}T${hours}:${minutes}`;
-                }
-
-                datetimeInput.min = formatDateTime(minDateTime);
-                datetimeInput.max = formatDateTime(maxDateTime);
-
-                // Ensure selected time is within range
-                if (datetimeInput.value < datetimeInput.min || datetimeInput.value > datetimeInput.max) {
-                    datetimeInput.value = datetimeInput.min;
-                }
-            }
-
-            datetimeInput.addEventListener("change", updateDateTimePicker);
-            updateDateTimePicker(); // Initialize options
-        });
-    </script>
+        .btn-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+    </style>
 </head>
+
 <body>
-    <div class="container mt-5">
-        <h2 class="text-center mb-4">Print Orders</h2>
+    <div class="container mt-4">
+        <div class="hero">
+            <h1 class="fw-bold">Print Orders</h1>
+            <p class="lead">Easily place and manage your print orders with quick processing.</p>
+        </div>
+    </div>
+    <div class="container">
+        <h2>Place Your Order</h2>
         <form action="/print_orders" method="post" enctype="multipart/form-data">
-            <!-- Number of Copies -->
             <div class="mb-3">
                 <label for="copies" class="form-label">Number of Copies</label>
                 <input type="number" class="form-control" id="copies" name="copies" min="1" required>
             </div>
-
-            <!-- Layout -->
             <div class="mb-3">
                 <label class="form-label">Layout</label>
                 <select class="form-select" name="layout" required>
@@ -96,8 +95,6 @@
                     <option value="landscape">Landscape</option>
                 </select>
             </div>
-
-            <!-- Print Type -->
             <div class="mb-3">
                 <label class="form-label">Print Type</label>
                 <select class="form-select" name="print_type" required>
@@ -105,8 +102,6 @@
                     <option value="color">Color</option>
                 </select>
             </div>
-
-            <!-- Single or Double Sided -->
             <div class="mb-3">
                 <label class="form-label">Print Sides</label>
                 <select class="form-select" name="print_sides" required>
@@ -114,57 +109,105 @@
                     <option value="double">Double Sided</option>
                 </select>
             </div>
-
-            <!-- Expected Date-Time (Single Field) -->
             <div class="mb-3">
                 <label for="expected_datetime" class="form-label">Expected Date & Time</label>
                 <input type="datetime-local" class="form-control" id="expected_datetime" name="expected_datetime" required>
             </div>
 
-            <!-- PDF Upload -->
-<div class="mb-3 position-relative">
-    <label for="pdf_upload" class="form-label">Upload PDF</label>
-    <div class="input-group">
-        <input type="file" class="form-control" id="pdf_upload" name="pdf_upload" accept=".pdf" required>
-        <button type="button" class="btn btn-outline-secondary" id="view_pdf" style="display: none;">
-            <i class="fa-solid fa-eye"></i> <!-- Eye Icon -->
-        </button>
-        <button type="button" class="btn btn-outline-danger" id="cancel_pdf" style="display: none;">
-            <i class="fa-solid fa-xmark"></i> <!-- X Icon -->
-        </button>
-    </div>
-</div>
-
-<!-- JavaScript to Handle View & Cancel -->
-<script>
-document.getElementById("pdf_upload").addEventListener("change", function(event) {
-    let file = event.target.files[0];
-    let viewButton = document.getElementById("view_pdf");
-    let cancelButton = document.getElementById("cancel_pdf");
-
-    if (file) {
-        viewButton.style.display = "inline-block";
-        cancelButton.style.display = "inline-block";
-
-        // Set view button to open the PDF
-        viewButton.onclick = function() {
-            let fileURL = URL.createObjectURL(file);
-            window.open(fileURL, "_blank");
-        };
-    }
-});
-
-document.getElementById("cancel_pdf").addEventListener("click", function() {
-    let fileInput = document.getElementById("pdf_upload");
-    fileInput.value = ""; // Reset the file input
-    document.getElementById("view_pdf").style.display = "none";
-    document.getElementById("cancel_pdf").style.display = "none";
-});
-</script>
-
-            <!-- Save and Next Button -->
-            <button type="submit" class="btn btn-primary">Save and Next</button>
+            <div class="mb-3 position-relative">
+                <label for="pdf_upload" class="form-label">Upload PDF</label>
+                <div class="input-group">
+                    <input type="file" class="form-control" id="pdf_upload" name="pdf_upload" accept=".pdf" required>
+                    <button type="button" id="view_pdf" class="btn btn-outline-secondary" style="display: none;">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                    <button type="button" id="cancel_pdf" class="btn btn-outline-danger" style="display: none;">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="btn-container">
+                <a href="/home" class="btn btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    Save and Next <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
         </form>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const datetimeInput = document.getElementById("expected_datetime");
+
+            function formatDateTime(date) {
+                let year = date.getFullYear();
+                let month = String(date.getMonth() + 1).padStart(2, '0');
+                let day = String(date.getDate()).padStart(2, '0');
+                let hours = String(date.getHours()).padStart(2, '0');
+                let minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+
+            function updateDateTimePicker() {
+                let now = new Date();
+                now.setMinutes(now.getMinutes() + 5);  // Set minimum selectable time to 5 minutes from now
+
+                 // Allow selecting date for today and the next two days
+
+                
+                if (datetimeInput.value < datetimeInput.min || datetimeInput.value > datetimeInput.max) {
+                    datetimeInput.value = datetimeInput.min;
+                }
+            }
+
+            function validateTimeInput(event) {
+                let selectedDate = new Date(event.target.value);
+                let minDate = new Date(datetimeInput.min);
+                let maxDate = new Date(datetimeInput.max);
+
+                let selectedHour = selectedDate.getHours();
+                let selectedMinutes = selectedDate.getMinutes();
+
+                let isValidTime = (selectedHour > 9 || (selectedHour === 9 && selectedMinutes >= 30)) &&
+                                  (selectedHour < 16 || (selectedHour === 16 && selectedMinutes <= 30));
+
+                if (selectedDate < minDate || selectedDate > maxDate || !isValidTime) {
+                    alert("Please select a time between 9:30 AM and 4:30 PM and at least 5 minutes from now.");
+                    datetimeInput.value = datetimeInput.min;
+                }
+            }
+
+            datetimeInput.addEventListener("change", function(event) {
+                validateTimeInput(event);
+            });
+
+            updateDateTimePicker();
+
+            document.getElementById("pdf_upload").addEventListener("change", function(event) {
+                let file = event.target.files[0];
+                let viewButton = document.getElementById("view_pdf");
+                let cancelButton = document.getElementById("cancel_pdf");
+
+                if (file) {
+                    viewButton.style.display = "inline-block";
+                    cancelButton.style.display = "inline-block";
+                    viewButton.onclick = function() {
+                        let fileURL = URL.createObjectURL(file);
+                        window.open(fileURL, "_blank");
+                    };
+                }
+            });
+
+            document.getElementById("cancel_pdf").addEventListener("click", function() {
+                let fileInput = document.getElementById("pdf_upload");
+                fileInput.value = "";
+                document.getElementById("view_pdf").style.display = "none";
+                document.getElementById("cancel_pdf").style.display = "none";
+            });
+        });
+    </script>
 </body>
+
 </html>
