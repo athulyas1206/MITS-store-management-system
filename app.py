@@ -14,6 +14,9 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 UPLOAD_FOLDER = 'static/profile_pics'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+# Ensure the upload folder exists
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -256,36 +259,6 @@ def order_history():
 
 
 
-@app.route('/profile')
-def profile():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
-
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (session['user_id'],))
-    user = cursor.fetchone()
-    conn.close()
-
-    if not user:
-        flash('User not found.', 'danger')
-        return redirect('/login')
-
-    return render_template('profile.html', user=user)
-
-
-
-
-@app.route('/remove_profile_photo', methods=['POST'])
-def remove_profile_photo():
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET photo = 'default_profile.png' WHERE mut_id = ?", (session['mut_id'],))
-    conn.commit()
-    conn.close()
-    return redirect(('edit_profile'))
-
 
 
 @app.route('/orders')
@@ -310,47 +283,86 @@ def orders():
     return render_template('orders.html', print_orders=print_orders, stationary_orders=stationary_orders)
 
 
-@app.route('/edit_profile', methods=['GET', 'POST'])
-def edit_profile():
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
     if 'user_id' not in session:
         flash('Please log in first.', 'warning')
         return redirect('/login')
 
     user_id = session['user_id']
-
-    # Connect to the database
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
 
     if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        photo = request.files['photo']
+        # Handle profile photo upload
+        if 'profile_photo' in request.files:
+            profile_photo = request.files['profile_photo']
+            if profile_photo and allowed_file(profile_photo.filename):
+                filename = secure_filename(profile_photo.filename)
+                profile_photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                profile_photo.save(profile_photo_path)
 
-        # Update profile picture if a new one is uploaded
-        if photo and allowed_file(photo.filename):
-            filename = secure_filename(f"{user_id}_{photo.filename}")
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            photo.save(photo_path)
+                # Update the user's profile photo in the database
+                cursor.execute('UPDATE users SET profile_photo=? WHERE id=?', (filename, user_id))
+                conn.commit()
 
-            # Save file path in the database
-            cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
+        # Handle password update
+        new_password = request.form.get('new_password')
+        if new_password:
+            cursor.execute('UPDATE users SET password=? WHERE id=?', (new_password, user_id))
+            conn.commit()
+            flash('Password updated successfully!', 'success')
 
-        # Update email and password
-        cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, user_id))
-
-        conn.commit()
-        conn.close()
-
-        flash('Profile updated successfully!', 'success')
-        return redirect('/edit_profile')
-
-    # Fetch current user data
-    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (user_id,))
+    cursor.execute('SELECT mut_id, email, password, profile_photo FROM users WHERE id=?', (user_id,))
     user = cursor.fetchone()
     conn.close()
 
-    return render_template('edit_profile.html', user=user)
+    if user:
+        mut_id, email, password, profile_photo = user
+        return render_template('profile.html', mut_id=mut_id, email=email, password=password, profile_photo=profile_photo)
+    else:
+        flash('User  not found.', 'danger')
+        return redirect('/home')
+
+
+
+
+@app.route('/upload_profile_photo', methods=['POST'])
+def upload_profile_photo():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    if 'profile_photo' not in request.files:
+        flash('No file part', 'danger')
+        return redirect('/profile')
+
+    file = request.files['profile_photo']
+
+    if file.filename == '':
+        flash('No selected file', 'danger')
+        return redirect('/profile')
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(f"{session['mut_id']}_{file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+
+        # Save the filename to the database
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET profile_photo=? WHERE mut_id=?", (filename, session['mut_id']))
+        conn.commit()
+        conn.close()
+
+        # Update session variable
+        session['profile_photo'] = filename
+
+        flash('Profile photo updated successfully!', 'success')
+        return redirect('/profile')
+    else:
+        flash('Invalid file format. Please upload PNG, JPG, or JPEG.', 'danger')
+        return redirect('/profile')
 
 
 if __name__ == '__main__':
