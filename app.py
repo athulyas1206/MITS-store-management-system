@@ -78,6 +78,42 @@ def admin_dashboard():
 
     return render_template('admin.html', orders=orders ,order_history=order_history)
 
+@app.route('/delete_order/<int:order_id>', methods=['POST'])
+def delete_order(order_id):
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # ✅ Retrieve the order details before deleting
+    cursor.execute("SELECT mut_id, copies, layout, print_type, print_sides, expected_datetime,pdf_filename FROM print_orders WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    if order:
+        # ✅ Print query for debugging
+        print("Order found:", order)
+
+        # ✅ Insert into order_history (columns must match exactly)
+        cursor.execute("""
+            INSERT INTO order_history (mut_id, copies, layout, print_type, print_sides, expected_datetime,pdf_filename)
+            VALUES (?, ?, ?, ?, ?, ?,?)
+        """, order)
+
+        conn.commit()  # Commit after inserting into history
+
+        # ✅ Now delete only from print_orders
+        cursor.execute("DELETE FROM print_orders WHERE id = ?", (order_id,))
+        conn.commit()  # Commit the deletion
+
+    conn.close()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/order_history')
+def order_history():
+    conn = sqlite3.connect("print_orders.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM order_history ORDER BY deleted_at DESC")
+    orders = cursor.fetchall()
+    conn.close()
+    return render_template("admin.html", orders=orders)
 
 
 @app.route('/update_status', methods=['POST'])
@@ -220,67 +256,7 @@ def order_summary():
         flash('No order found.', 'danger')
         return redirect('/print_orders')
 
-@app.route('/delete_order/<int:order_id>', methods=['POST'])
-def delete_order(order_id):
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
 
-    # ✅ Retrieve the order details before deleting
-    cursor.execute("SELECT mut_id, copies, layout, print_type, print_sides, expected_datetime FROM print_orders WHERE id = ?", (order_id,))
-    order = cursor.fetchone()
-
-    if order:
-        # ✅ Print query for debugging
-        print("Order found:", order)
-
-        # ✅ Insert into order_history (columns must match exactly)
-        cursor.execute("""
-            INSERT INTO order_history (mut_id, copies, layout, print_type, print_sides, expected_datetime)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, order)
-
-        conn.commit()  # Commit after inserting into history
-
-        # ✅ Now delete only from print_orders
-        cursor.execute("DELETE FROM print_orders WHERE id = ?", (order_id,))
-        conn.commit()  # Commit the deletion
-
-    conn.close()
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/order_history')
-def order_history():
-    conn = sqlite3.connect("print_orders.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM order_history ORDER BY deleted_at DESC")
-    orders = cursor.fetchall()
-    conn.close()
-    return render_template("admin.html", orders=orders)
-
-
-
-
-
-@app.route('/orders')
-def orders():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
-
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-
-    # Fetch Print Orders
-    cursor.execute("SELECT id, expected_datetime, status FROM print_orders WHERE mut_id=?", (session['mut_id'],))
-    print_orders = cursor.fetchall()
-
-    # Fetch Stationary Orders (to be implemented later)
-    cursor.execute("SELECT id, expected_datetime, status FROM stationary_orders WHERE mut_id=?", (session['mut_id'],))
-    stationary_orders = cursor.fetchall()
-
-    conn.close()
-
-    return render_template('orders.html', print_orders=print_orders, stationary_orders=stationary_orders)
 
 
 @app.route('/profile', methods=['GET', 'POST'])

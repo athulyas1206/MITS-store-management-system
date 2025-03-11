@@ -9,11 +9,10 @@ def create_user_db():
             mut_id TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL
-                   
         )
     ''')
     try:
-        cursor.execute("ALTER TABLE users ADD COLUMN profile_photo TEXT;")
+        cursor.execute("ALTER TABLE users ADD COLUMN photo TEXT DEFAULT 'static/profile_pics/default.jpg';")
     except sqlite3.OperationalError:
         print("Column 'photo' already exists.")
 
