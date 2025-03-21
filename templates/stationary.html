@@ -16,18 +16,16 @@
 
     <div class="items-container">
         {% for item in items %}
-        <a href="product_details.html?id={{ product_id }}" class="item-link"></a>
-            <div class="item-card">
+        <a href="/product/{{ item[0] }}" class="item-link" style="text-decoration: none; color: inherit;">
+            <div class="item-card" style="cursor: pointer;">
                 <img src="{{ url_for('static', filename=item[5]) }}" alt="{{ item[1] }}" class="item-image">
                 <h3>{{ item[1] }}</h3>  <!-- Product Name -->
-                <p>Category: {{ item[2] }}</p>  <!-- Category -->
                 <p>Price: ₹{{ item[3] }}</p>  <!-- Price -->
-                <p>Stock: {{ item[4] }}</p>  <!-- Stock -->
-                <a href="/product/{{ item[0] }}">View Details</a>  <!-- Product Details Link -->
             </div>
         </a>
         {% endfor %}
     </div>
+    
     <script>
         function searchProducts() {
             let input = document.getElementById("searchBox").value.toLowerCase();
