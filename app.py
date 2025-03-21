@@ -53,7 +53,6 @@ def login():
 
     return render_template('login.html')
 
-@app.route('/register', methods=['GET', 'POST'])
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -93,6 +92,7 @@ def update_status():
 def upload(filename):
     return f"File {filename} uploaded successfully!"
 
+@app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         mut_id = request.form['mut_id']
@@ -124,8 +124,6 @@ def register():
 
     return render_template('register.html')
 
-
-
 @app.route('/home')
 def home():
     if 'user_id' in session:
@@ -146,7 +144,18 @@ def about():
 
 @app.route('/stationary')
 def stationary():
-    return render_template('stationary.html')
+    # Connect to the database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+    
+    # Fetch all stationary items
+    cursor.execute("SELECT id, name, category, price, stock, image_url, description FROM stationary_items")
+    items = cursor.fetchall()
+    
+    # Close connection
+    conn.close()
+    
+    return render_template('stationary.html', items=items)
 
 
 @app.route('/print_orders', methods=['GET', 'POST'])
@@ -222,15 +231,15 @@ def delete_order(order_id):
     conn = sqlite3.connect('print_orders.db')
     cursor = conn.cursor()
 
-    # ✅ Retrieve the order details before deleting
+    #  Retrieve the order details before deleting
     cursor.execute("SELECT mut_id, copies, layout, print_type, print_sides, expected_datetime FROM print_orders WHERE id = ?", (order_id,))
     order = cursor.fetchone()
 
     if order:
-        # ✅ Print query for debugging
+        #  Print query for debugging
         print("Order found:", order)
 
-        # ✅ Insert into order_history (columns must match exactly)
+        #  Insert into order_history (columns must match exactly)
         cursor.execute("""
             INSERT INTO order_history (mut_id, copies, layout, print_type, print_sides, expected_datetime)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -238,7 +247,7 @@ def delete_order(order_id):
 
         conn.commit()  # Commit after inserting into history
 
-        # ✅ Now delete only from print_orders
+        #  Now delete only from print_orders
         cursor.execute("DELETE FROM print_orders WHERE id = ?", (order_id,))
         conn.commit()  # Commit the deletion
 
