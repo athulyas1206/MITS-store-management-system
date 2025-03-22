@@ -211,7 +211,7 @@ def create_print_orders():
 
         if user:
             user_email = user[0]
-            send_order_summary_email(user_email, num_pages, copies, total_cost)
+            #send_order_summary_email(user_email, num_pages, copies, total_cost)
 
         flash('Order saved successfully! Proceed to payment.', 'success')
         return redirect('/order_summary')
@@ -255,7 +255,6 @@ def send_order_summary_email(to_email, num_pages, copies, total_cost):
     body = f"""
     <h1>Order Summary</h1>
     <p>Thank you for your order!</p>
-    <p>Hello {to_email},</p>
     <p>Number of Pages: {num_pages}</p>
     <p>Copies: {copies}</p>
     <p>Total Cost: Rs {total_cost}</p>
