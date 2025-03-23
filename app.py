@@ -127,11 +127,35 @@ def verify_otp():
             flash('Email verified successfully! You can now log in.', 'success')
             return redirect('/login')
         else:
+            # Send alert email for incorrect OTP
+            cursor.execute('SELECT email FROM users WHERE mut_id=?', (mut_id,))
+            user_email = cursor.fetchone()
+            if user_email:
+                send_incorrect_otp_alert(user_email[0], mut_id)
+
             flash('Invalid OTP. Please try again.', 'danger')
+            return redirect('/login')  # Redirect to login page
 
         conn.close()
 
     return render_template('verify_otp.html')
+
+def send_incorrect_otp_alert(to_email, mut_id):
+    subject = "Incorrect OTP Attempt"
+    body = f"""
+    <h1>Incorrect OTP Attempt</h1>
+    <p>There was an incorrect OTP attempt for the account with MUT ID: <strong>{mut_id}</strong>.</p>
+    <p>If this was not you, please secure your account.</p>
+    """
+
+    msg = Message(subject, sender=app.config['MAIL_USERNAME'], recipients=[to_email])
+    msg.html = body
+
+    try:
+        mail.send(msg)
+        print("Alert email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send alert email: {e}")
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
