@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from PyPDF2 import PdfReader
 from flask_mail import Mail, Message
+import random
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for session management
@@ -31,7 +32,7 @@ def allowed_file(filename):
 def validate_user(mut_id, password):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE mut_id=? AND password=?', (mut_id, password))
+    cursor.execute('SELECT * FROM users WHERE mut_id=? AND password=? AND is_verified=1', (mut_id, password))
     user = cursor.fetchone()
     conn.close()
     return user
@@ -68,14 +69,20 @@ def register():
         mut_id = request.form['mut_id']
         email = request.form['email']
         password = request.form['password']
+        otp = str(random.randint(100000, 999999))  # Generate a random 6-digit OTP
 
         try:
             conn = sqlite3.connect('users.db', timeout=10)
             cursor = conn.cursor()
-            cursor.execute('INSERT INTO users (mut_id, email, password) VALUES (?, ?, ?)', (mut_id, email, password))
+            cursor.execute('INSERT INTO users (mut_id, email, password, otp) VALUES (?, ?, ?, ?)', 
+                           (mut_id, email, password, otp))
             conn.commit()
-            flash('Registration successful! You can now log in.', 'success')
-            return redirect('/login')
+
+            # Send OTP email
+            send_otp(email, otp)
+
+            flash('Registration successful! Please check your email for the OTP.', 'success')
+            return redirect('/verify_otp')  # Redirect to OTP verification page
         except sqlite3.IntegrityError:
             flash('MUT ID or Email already exists.', 'danger')
         except sqlite3.OperationalError as e:
@@ -85,6 +92,46 @@ def register():
             conn.close()
 
     return render_template('register.html')
+
+def send_otp(to_email, otp):
+    subject = "Your OTP for Email Verification"
+    body = f"""
+    <h1>Email Verification</h1>
+    <p>Your OTP is: <strong>{otp}</strong></p>
+    <p>Please enter this OTP to verify your email address.</p>
+    """
+
+    msg = Message(subject, sender=app.config['MAIL_USERNAME'], recipients=[to_email])
+    msg.html = body
+
+    try:
+        mail.send(msg)
+        print("OTP email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+@app.route('/verify_otp', methods=['GET', 'POST'])
+def verify_otp():
+    if request.method == 'POST':
+        mut_id = request.form['mut_id']
+        entered_otp = request.form['otp']
+
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE mut_id=? AND otp=?', (mut_id, entered_otp))
+        user = cursor.fetchone()
+
+        if user:
+            cursor.execute('UPDATE users SET is_verified=1 WHERE mut_id=?', (mut_id,))
+            conn.commit()
+            flash('Email verified successfully! You can now log in.', 'success')
+            return redirect('/login')
+        else:
+            flash('Invalid OTP. Please try again.', 'danger')
+
+        conn.close()
+
+    return render_template('verify_otp.html')
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -253,6 +300,7 @@ def order_summary():
 def send_order_summary_email(to_email, num_pages, copies, total_cost):
     subject = "Your Order Summary"
     body = f"""
+    <h1>Your order is successfully placed!</h1>
     <h1>Order Summary</h1>
     <p>Thank you for your order!</p>
     <p>Number of Pages: {num_pages}</p>
@@ -269,6 +317,31 @@ def send_order_summary_email(to_email, num_pages, copies, total_cost):
         print("Email sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
+
+@app.route('/pay_on_google_pay', methods=['POST'])
+def pay_on_google_pay():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    num_pages = request.form['num_pages']
+    copies = request.form['copies']
+    total_cost = request.form['total_cost']
+    mut_id = session.get('mut_id')
+
+    # Fetch user email from the database
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT email FROM users WHERE mut_id=?', (mut_id,))
+    user = cursor.fetchone()
+    conn.close()
+
+    if user:
+        user_email = user[0]
+        send_order_summary_email(user_email, num_pages, copies, total_cost)
+
+    flash('Payment initiated! A summary has been sent to your email.', 'success')
+    return redirect('/home')
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
@@ -307,6 +380,7 @@ def profile():
     else:
         flash('User  not found.', 'danger')
         return redirect('/home')
+    
 
 @app.route('/upload_profile_photo', methods=['POST'])
 def upload_profile_photo():
