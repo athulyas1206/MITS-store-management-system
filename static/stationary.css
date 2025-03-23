@@ -22,7 +22,7 @@
     position: absolute;
     top: 15px;
     left: 15px;
-    background-color: #2ecc71;  /* Green color */
+    background-color: #3498db;  /* blue color */
     color: white;
     padding: 10px 15px;
     text-decoration: none;
@@ -35,7 +35,7 @@
 
 /* Hover Effect */
 .back-button:hover {
-    background-color: #27ae60; /* Darker green on hover */
+    background-color: #2980b9; /* Darker blue on hover */
     transform: scale(1.05);
 }
 
@@ -45,16 +45,19 @@
 }
 
 .search-container {
-    text-align: center;
+    display: flex;
+    justify-content: center;  /* Center the search bar */
     margin: 20px 0;
 }
 
 #searchBox {
-    width: 50%;
+    width: 30%;
     padding: 10px;
     font-size: 16px;
     border: 1px solid #ddd;
     border-radius: 5px;
     outline: none;
 }
-
+body {
+    background-color: yellow; /* Temporary Test */
+}

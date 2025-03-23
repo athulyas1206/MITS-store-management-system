@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash, session,url_for,jsonify,flash
+from flask import Flask, render_template, request, redirect, flash, session,url_for,jsonify
 from werkzeug.utils import secure_filename
 import sqlite3
 import os
@@ -156,6 +156,20 @@ def stationary():
     conn.close()
     
     return render_template('stationary.html', items=items)
+
+@app.route('/product/<int:product_id>')
+def product_details(product_id):
+    # Fetch product details from your database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM stationary_items WHERE id = ?", (product_id,))
+    product = cursor.fetchone()
+    conn.close()
+
+    if product:
+        return render_template('product_details.html', product=product)
+    else:
+        return "Product not found", 404
 
 
 @app.route('/print_orders', methods=['GET', 'POST'])

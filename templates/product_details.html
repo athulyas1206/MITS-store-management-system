@@ -3,20 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Details</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>{{ product[1] }}</title>
+    
 </head>
 <body>
-    <a href="stationary.html" class="back-button">⬅ Back to Stationary</a>
-    <div class="product-container">
-        <img id="product-image" src="" alt="Product Image">
-        <h2 id="product-name"></h2>
-        <p><strong>Category:</strong> <span id="product-category"></span></p>
-        <p><strong>Price:</strong> ₹<span id="product-price"></span></p>
-        <p><strong>Stock:</strong> <span id="product-stock"></span></p>
-        <p><strong>Description:</strong> <span id="product-description"></span></p>
-    </div>
+    <a href="/stationary" class="back-button"> Back to Stationary</a>
 
-    <script src="product_details.js"></script>
+    <div class="product-container">
+        <img src="{{ url_for('static', filename=product[5]) }}" alt="Product Image">
+        <h2>{{ product[1] }}</h2>
+        <p><strong>Category:</strong> {{ product[2] }}</p>
+        <p><strong>Price:</strong> ₹{{ product[3] }}</p>
+        <p><strong>Stock:</strong> {{ product[4] }}</p>
+        <p><strong>Description:</strong> {{ product[6] }}</p>
+    </div>
+    <style>
+        .product-container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.product-container img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.back-button {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background-color: #2ecc71;
+    color: white;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.back-button:hover {
+    background-color: #27ae60;
+    transform: scale(1.05);
+}
+
+    </style>
 </body>
 </html>
