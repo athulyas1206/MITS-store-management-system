@@ -13,10 +13,9 @@ def create_user_db():
     ''')
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN photo TEXT DEFAULT 'static/profile_pics/default.jpg';")
-
     except sqlite3.OperationalError:
         print("Column 'photo' already exists.")
-
+    
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN otp TEXT;")
 
@@ -28,7 +27,6 @@ def create_user_db():
 
     except sqlite3.OperationalError:
         print("Column 'is_verified' already exists.")
-
 
     conn.commit()   # Save changes
     conn.close() 
