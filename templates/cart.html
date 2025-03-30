@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 40px; background-color: #f5f5f5; }
+        .cart-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1); }
+        .cart-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #ddd; }
+        .empty-cart { font-size: 18px; color: gray; }
+        .action-buttons { margin-top: 20px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; }
+        .buy-button { background-color: #28a745; color: white; }
+        .stationary-button { background-color: #007bff; color: white; text-decoration: none; display: inline-block; padding: 10px 20px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="cart-container">
+    <h2>Your Cart</h2>
+
+    {% if cart_items %}
+        {% for item in cart_items %}
+            <div class="cart-item">
+                <span>{{ item[1] }} (₹{{ item[2] }}) - Qty: {{ item[3] }}</span>
+                <form action="{{ url_for('remove_from_cart', product_id=item[0]) }}" method="post">
+                    <button type="submit" style="background-color: red; color: white;">Remove</button>
+                </form>
+            </div>
+        {% endfor %}
+        <div class="action-buttons">
+            <button class="buy-button">Buy</button>
+        </div>
+    {% else %}
+        <p class="empty-cart">No items in cart.</p>
+        <a href="{{ url_for('stationary') }}" class="stationary-button">Go to Stationary</a>
+    {% endif %}
+</div>
+
+</body>
+</html>

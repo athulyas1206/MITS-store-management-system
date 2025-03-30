@@ -124,15 +124,13 @@ cursor.execute('''
         category TEXT NOT NULL,
         price REAL NOT NULL,
         stock INTEGER NOT NULL,
-        image_url TEXT
+        image_url TEXT,
+        description TEXT,
+        rating INTEGER DEFAULT 0 CHECK (rating BETWEEN 0 AND 5),
+        rating_count INTEGER DEFAULT 0
     )
 ''')
-try:
-    # Try adding the 'description' column
-    cursor.execute("ALTER TABLE stationary_items ADD COLUMN description TEXT")
-    print("Column 'description' added successfully!")
-except sqlite3.OperationalError:
-    print("Column 'description' already exists. Skipping...")
+
 
 # Commit and close the connection
 conn.commit()
@@ -151,9 +149,9 @@ cursor = conn.cursor()
 # Insert products into the table (WITHOUT manually setting id)
 for index, row in df.iterrows():
     cursor.execute("""
-        INSERT INTO stationary_items (name, category, price, stock, image_url, description) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (row["name"], row["category"], row["price"], row["stock"], row["image_url"], row["description"]))
+        INSERT INTO stationary_items (name, category, price, stock, image_url, description, rating, rating_count) 
+        VALUES (?, ?, ?, ?, ?, ?,?,?)
+    """, (row["name"], row["category"], row["price"], row["stock"], row["image_url"], row["description"], row["rating"], row["rating_count"]))
 
 # Commit and close the connection
 conn.commit()
@@ -180,6 +178,25 @@ conn.commit()
 conn.close()
 
 print("Transactions table created successfully!")
+
+conn = sqlite3.connect("stationary.db")
+cursor = conn.cursor()
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS cart (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
+    )
+''')
+
+conn.commit()
+conn.close()
+
+print("Cart table created successfully!")
+
 
 
 
