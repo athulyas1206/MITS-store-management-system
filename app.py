@@ -143,36 +143,6 @@ def logout():
 def about():
     return render_template('about.html')
 
-@app.route('/stationary')
-def stationary():
-    # Connect to the database
-    conn = sqlite3.connect('stationary.db')
-    cursor = conn.cursor()
-    
-    # Fetch all stationary items
-    cursor.execute("SELECT id, name, category, price, stock, image_url, description FROM stationary_items")
-    items = cursor.fetchall()
-    
-    # Close connection
-    conn.close()
-    
-    return render_template('stationary.html', items=items)
-
-@app.route('/product/<int:product_id>')
-def product_details(product_id):
-    # Fetch product details from your database
-    conn = sqlite3.connect('stationary.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM stationary_items WHERE id = ?", (product_id,))
-    product = cursor.fetchone()
-    conn.close()
-
-    if product:
-        return render_template('product_details.html', product=product)
-    else:
-        return "Product not found", 404
-
-
 @app.route('/print_orders', methods=['GET', 'POST'])
 def create_print_orders():
     if request.method == 'POST':
@@ -218,7 +188,6 @@ def create_print_orders():
         return redirect('/order_summary')
 
     return render_template('print_orders.html')
-
 
 @app.route('/order_summary')
 def order_summary():
@@ -298,9 +267,6 @@ def profile():
 
     return render_template('profile.html', user=user)
 
-
-
-
 @app.route('/remove_profile_photo', methods=['POST'])
 def remove_profile_photo():
     conn = sqlite3.connect('users.db')
@@ -309,6 +275,7 @@ def remove_profile_photo():
     conn.commit()
     conn.close()
     return redirect(('edit_profile'))
+
 
 
 
@@ -376,13 +343,44 @@ def edit_profile():
 
     return render_template('edit_profile.html', user=user)
 
+
+
+@app.route('/stationary')
+def stationary():
+    # Connect to the database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+    
+    # Fetch all stationary items
+    cursor.execute("SELECT id, name, category, price, stock, image_url, description, rating FROM stationary_items")
+    items = cursor.fetchall()
+    
+    # Close connection
+    conn.close()
+    
+    return render_template('stationary.html', items=items)
+
+@app.route('/product/<int:product_id>')
+def product_details(product_id):
+    # Fetch product details from your database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM stationary_items WHERE id = ?", (product_id,))
+    product = cursor.fetchone()
+    conn.close()
+
+    if product:
+        return render_template('product_details.html', product=product)
+    else:
+        return "Product not found", 404
+
 @app.route('/submit_rating/<int:product_id>', methods=['POST'])
 def submit_rating(product_id):
     user_rating = int(request.form['user_rating'])  # Get user's rating from form
 
     # Connect to database
     conn = sqlite3.connect('stationary.db')
-    cursor = conn.cursor()
+    cursor = conn.cursor() 
 
     # Fetch current rating from the database
     cursor.execute("SELECT rating FROM stationary_items WHERE id = ?", (product_id,))
@@ -403,32 +401,36 @@ def submit_rating(product_id):
 @app.route('/add_to_cart/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):
     if 'user_id' not in session:
-        return redirect(url_for('login'))  # Redirect if not logged in
+        return redirect(url_for('login'))
 
     user_id = session['user_id']
+    quantity = int(request.form.get("quantity", 1))  # Get quantity from form, default to 1
 
     conn = sqlite3.connect("stationary.db")
     cursor = conn.cursor()
 
     # Check if the product is already in the cart
     cursor.execute("SELECT quantity FROM cart WHERE user_id = ? AND product_id = ?", (user_id, product_id))
-    result = cursor.fetchone()
+    existing_item = cursor.fetchone()
 
-    if result:
-        # If already in cart, increase quantity
-        new_quantity = result[0] + 1
-        cursor.execute("UPDATE cart SET quantity = ? WHERE user_id = ? AND product_id = ?", (new_quantity, user_id, product_id))
+    if existing_item:
+        # If the item exists, update the quantity
+        new_quantity = existing_item[0] + quantity
+        cursor.execute("UPDATE cart SET quantity = ? WHERE user_id = ? AND product_id = ?", 
+                       (new_quantity, user_id, product_id))
     else:
-        # Otherwise, add to cart
-        cursor.execute("INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)", (user_id, product_id, 1))
+        # If the item does not exist, insert it
+        cursor.execute("INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)", 
+                       (user_id, product_id, quantity))
 
     conn.commit()
     conn.close()
 
-    return redirect(url_for('cart_page'))  # Redirect to cart page
+    return redirect(url_for('cart_page'))
 
 @app.route('/cart')
 def cart_page():
+    
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
@@ -445,9 +447,34 @@ def cart_page():
     """, (user_id,))
 
     cart_items = cursor.fetchall()
+    # Calculate the total cost
+    
+    total_cost = sum(item[2] * item[3] for item in cart_items) if cart_items else 0    
+    print("Cart Items:", cart_items)  # Debugging Output
+    print("Total Cost:", total_cost)  # Debugging Output
+
     conn.close()
 
-    return render_template("cart.html", cart_items=cart_items)
+    return render_template("cart.html", cart_items=cart_items,total_cost=total_cost)
+
+
+
+@app.route('/update_cart/<int:product_id>', methods=['POST'])
+def update_cart(product_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    new_quantity = int(request.form.get('quantity'))
+
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE cart SET quantity = ? WHERE user_id = ? AND product_id = ?", (new_quantity, user_id, product_id))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('cart_page'))
 
 @app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
 def remove_from_cart(product_id):
@@ -461,6 +488,114 @@ def remove_from_cart(product_id):
     conn.close()
 
     return redirect(url_for('cart_page'))  # Redirect back to cart page
+
+
+@app.route('/buy', methods=['POST'])
+def buy_items():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    # Buying from cart
+    if 'from_cart' in request.form:
+        cursor.execute("SELECT product_id, quantity FROM cart WHERE user_id = ?", (user_id,))
+        cart_items = cursor.fetchall()
+
+        if not cart_items:
+            conn.close()
+            return redirect(url_for('cart_page'))
+
+        for product_id, quantity in cart_items:
+            cursor.execute("SELECT price FROM stationary_items WHERE id = ?", (product_id,))
+            price = cursor.fetchone()[0]
+            total_cost = price * quantity
+
+            cursor.execute("""
+                INSERT INTO transactions (user_id, product_id, quantity, total_cost)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, product_id, quantity, total_cost))
+
+        # Clear cart after purchase
+        cursor.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
+
+    # Buying from product details page
+    else:
+        product_id = request.form.get('product_id')
+        quantity = int(request.form.get('quantity'))
+
+        cursor.execute("SELECT price FROM stationary_items WHERE id = ?", (product_id,))
+        price = cursor.fetchone()[0]
+        total_cost = price * quantity
+
+        cursor.execute("""
+            INSERT INTO transactions (user_id, product_id, quantity, total_cost)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, product_id, quantity, total_cost))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('s_orders'))
+
+@app.route('/s_orders')
+def s_orders():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT t.id, s.name, t.quantity, t.total_cost, t.status, t.purchase_date
+        FROM transactions t
+        JOIN stationary_items s ON t.product_id = s.id
+        WHERE t.user_id = ?
+        ORDER BY t.purchase_date DESC
+    """, (user_id,))
+
+    orders = cursor.fetchall()
+    conn.close()
+
+    return render_template("s_orders.html", orders=orders)
+
+@app.route('/buy_cart_items', methods=['POST'])
+def buy_cart_items():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    # Fetch cart items with product price
+    cursor.execute("SELECT c.product_id, c.quantity, s.price FROM cart c JOIN stationary_items s ON c.product_id = s.id WHERE c.user_id = ?", (user_id,))
+    cart_items = cursor.fetchall()
+
+    if not cart_items:
+        conn.close()
+        return redirect(url_for('cart_page'))  # No items in cart, redirect back
+
+    # Insert cart items into transactions table with total cost
+    for item in cart_items:
+        product_id, quantity, price = item
+        total_cost = price * quantity  # Calculate total cost
+        cursor.execute("INSERT INTO transactions (user_id, product_id, quantity, total_cost) VALUES (?, ?, ?, ?)",
+                       (user_id, product_id, quantity, total_cost))
+
+    # Clear cart after purchase
+    cursor.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('s_orders'))  # Redirect to orders page
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

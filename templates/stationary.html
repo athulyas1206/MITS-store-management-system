@@ -1,132 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stationary Items</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='stationary.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='stationary.css') }}" />
 </head>
+
 <body class="bg-light">
-    
-     <!-- Heading with Back Button -->
-     <div class="bg-primary text-white p-3 d-flex align-items-center justify-content-between">
+    <!-- Heading with Back Button -->
+    <div class="bg-primary text-white p-3 d-flex align-items-center justify-content-between">
         <a href="{{ url_for('home') }}" class="btn btn-warning">Back to Home</a>
         <h1 class="m-0 text-center flex-grow-1">Stationary Items</h1>
     </div>
 
-   
-        <!-- Navigation Bar for Categories -->
-        <nav class="navbar navbar-expand-lg bg-primary">
-            <div class="container-fluid justify-content-center">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link text-white" href="#">Pens</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="#">Notebooks</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="#">Art Supplies</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="#">Files & Folders</a></li>
-                    <!-- Add more categories as needed -->
-                </ul>
-            </div>
-        </nav>
-        <div class="container mt-4">
-
+    <!-- Navigation Bar for Categories -->
+    <nav class="navbar navbar-expand-lg bg-primary">
+        <div class="container-fluid justify-content-center">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">Pens</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">Notebooks</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">Art Supplies</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">Files & Folders</a>
+                </li>
+                <!-- Add more categories as needed -->
+            </ul>
+        </div>
+    </nav>
+    <div class="container mt-4">
         <!-- Centered Search Bar -->
         <div class="d-flex justify-content-center mb-4">
-            <input 
-                type="text" 
-                id="searchBox" 
-                class="form-control w-50" 
-                placeholder="Search for products..." 
-                onkeyup="searchProducts()"
-            >
+            <input type="text" id="searchBox" class="form-control w-50" placeholder="Search for products..."
+                onkeyup="searchProducts()" />
         </div>
 
         <!-- Items Container -->
-        <div class="row">
-            {% for item in items %}
-            <div class="col-md-4 col-lg-3 mb-4">
-                <a href="{{ url_for('product_details', product_id=item[0]) }}" class="text-decoration-none text-dark">
-                    <div class="card item-card shadow-sm border-0">
-                        <img 
-                            src="{{ url_for('static', filename=item[5]) }}" 
-                            class="card-img-top"
-                            alt="{{ item[1] }}"
-                        >
-                        <div class="card-body text-center">
-                            <h5 class="card-title">{{ item[1] }}</h5>
-                            <p class="card-text">Price: ₹{{ item[3] }}</p>
-                            <div class="rating">
-                                {% set rating = item[6] | int %} <!-- Assuming 'rating' is at index 6 in 'item' -->
-                                {% for i in range(1, 6) %}
-                                    {% if rating >= i %}
-                                        <span class="star filled">★</span>
+        <div class="container">
+            <div id="itemsContainer" class="row g-3">
+                {% for item in items %}
+                <div class="col-md-4 col-lg-3 mb-4">
+                    <a href="{{ url_for('product_details', product_id=item[0]) }}"
+                        class="text-decoration-none text-dark">
+                        <div class="card item-card shadow-sm border-0">
+                            <img src="{{ url_for('static', filename=item[5]) }}" class="card-img-top"
+                                alt="{{ item[1] }}" />
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ item[1] }}</h5>
+                                <p class="card-text">Price: ₹{{ item[3] }}</p>
+                                <div class="rating">
+                                    {% set rating = item[7] | int %}
+                                    <!-- Assuming 'rating' is at index 6 in 'item' -->
+                                    {% for i in range(1, 6) %} {% if rating >= i %}
+                                    <span class="star filled">★</span>
                                     {% else %}
-                                        <span class="star empty">☆</span>
-                                    {% endif %}
-                                {% endfor %}
+                                    <span class="star empty">☆</span>
+                                    {% endif %} {% endfor %}
+                                </div>
                             </div>
                         </div>
-                        
-                    </div>
-                </a>
+                    </a>
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
     </div>
 
     <script>
+        
         function searchProducts() {
             let input = document.getElementById("searchBox").value.toLowerCase();
-            let items = document.getElementsByClassName("item-card");
-            for (let i = 0; i < items.length; i++) {
-                let name = items[i].getElementsByTagName("h5")[0].innerText.toLowerCase();
-                items[i].parentElement.style.display = name.includes(input) ? "" : "none";
+            let container = document.getElementById("itemsContainer");
+            let items = Array.from(container.children); // Get all item cards
+
+            // Restore all items when search is empty
+            if (input.trim() === "") {
+                items.forEach(item => item.style.display = "");
+                return;
             }
+
+            let matchedItems = [];
+            let nonMatchedItems = [];
+
+            // Separate matching and non-matching items
+            items.forEach(item => {
+                let name = item.querySelector("h5").innerText.toLowerCase();
+                if (name.includes(input)) {
+                    matchedItems.push(item);
+                } else {
+                    nonMatchedItems.push(item);
+                }
+            });
+
+            // Sort matched items alphabetically
+            matchedItems.sort((a, b) => {
+                let nameA = a.querySelector("h5").innerText.toLowerCase();
+                let nameB = b.querySelector("h5").innerText.toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+
+            // Hide non-matching items
+            nonMatchedItems.forEach(item => item.style.display = "none");
         }
 
-        document.querySelectorAll(".rating").forEach(ratingDiv => {
+        document.querySelectorAll(".rating").forEach((ratingDiv) => {
             const ratingValue = parseInt(ratingDiv.getAttribute("data-rating"));
             updateStars(ratingDiv, ratingValue);
 
-            ratingDiv.addEventListener("click", function(event) {
-                const starIndex = Array.from(ratingDiv.children).indexOf(event.target) + 1;
+            ratingDiv.addEventListener("click", function (event) {
+                const starIndex =
+                    Array.from(ratingDiv.children).indexOf(event.target) + 1;
                 ratingDiv.setAttribute("data-rating", starIndex);
                 updateStars(ratingDiv, starIndex);
             });
         });
-
-
     </script>
 
-        <style>
-            .item-card {
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-                border-radius: 12px;  /* Improved rounded corners */
-                overflow: hidden;     /* Prevents image overflow */
-                padding: 10px; /* Increased card size */
-            }
-            .item-card img {
-                height: 150px;         /* Ensures consistent image size */
-                width: 100%;           /* Full width for image */
-                object-fit: contain;   /* Ensures images scale properly */
-                background-color: #f8f9fa; /* Subtle background to improve look */
-                padding: 0px;         /* Adds space around the image */
-            }
-            .card-img-top {
-            height: 180px; /* Increased image size */
-            object-fit: contain; /* Ensures full image visibility */
-            padding: 10px; /* Adds space around the image */
+    <style>
+        ::-webkit-scrollbar {
+            display: none;
+            /* Hides the scrollbar */
         }
-            
-            .item-card:hover {
-                transform: scale(1.05);
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            }
-            .card-body {
-                padding: 10px;
-            }
-        </style>
 
+        .item-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 12px;
+            /* Improved rounded corners */
+            overflow: hidden;
+            /* Prevents image overflow */
+            padding: 10px;
+            /* Increased card size */
+        }
 
+        .item-card img {
+            height: 150px;
+            /* Ensures consistent image size */
+            width: 100%;
+            /* Full width for image */
+            object-fit: contain;
+            /* Ensures images scale properly */
+            background-color: #f8f9fa;
+            /* Subtle background to improve look */
+            padding: 0px;
+            /* Adds space around the image */
+        }
+
+        .card-img-top {
+            height: 180px;
+            /* Increased image size */
+            object-fit: contain;
+            /* Ensures full image visibility */
+            padding: 10px;
+            /* Adds space around the image */
+        }
+
+        .item-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-body {
+            padding: 10px;
+        }
+    </style>
 </body>
+
 </html>

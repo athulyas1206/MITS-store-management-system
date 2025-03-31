@@ -131,12 +131,38 @@ cursor.execute('''
     )
 ''')
 
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS cart (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
+    )
+''')
+
+# Create transactions table
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER NOT NULL,
+        total_cost REAL NOT NULL,
+        status TEXT DEFAULT 'pending',
+        purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
+    );
+    """)
+
 
 # Commit and close the connection
 conn.commit()
 conn.close()
 
 print("Database and table created successfully!")
+print("Cart table created successfully!")
+print("transactions table created successfully!")
 
 # Load the CSV file
 csv_file = "stationary_products_with_description.csv"
@@ -159,43 +185,11 @@ conn.close()
 
 print("Products inserted successfully!")
 
-conn = sqlite3.connect("stationary.db")
-cursor = conn.cursor()
 
-# Create transactions table if it doesn't exist
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER NOT NULL,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
-    )
-""")
 
-conn.commit()
-conn.close()
 
-print("Transactions table created successfully!")
 
-conn = sqlite3.connect("stationary.db")
-cursor = conn.cursor()
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS cart (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER DEFAULT 1,
-        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
-    )
-''')
-
-conn.commit()
-conn.close()
-
-print("Cart table created successfully!")
 
 
 
