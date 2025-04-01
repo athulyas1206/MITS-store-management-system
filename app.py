@@ -6,6 +6,7 @@ from datetime import datetime
 from PyPDF2 import PdfReader
 from flask_mail import Mail, Message
 import random
+import re  # Import regex for validation
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for session management
@@ -32,7 +33,7 @@ def allowed_file(filename):
 def validate_user(mut_id, password):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE mut_id=? AND password=? AND is_verified=1', (mut_id, password))
+    cursor.execute('SELECT * FROM users WHERE mut_id=? AND password=?', (mut_id, password))
     user = cursor.fetchone()
     conn.close()
     return user
@@ -69,27 +70,33 @@ def register():
         mut_id = request.form['mut_id']
         email = request.form['email']
         password = request.form['password']
+        
+        # Validate MUT ID format
+        if not re.match(r'^MUT\d{2}(AD|CS|CE|ME|EE|EC)\d{3}$', mut_id):
+            flash('Invalid MUT ID format.','danger')
+            return redirect('/register')
+
+        # Validate email domain
+        if not email.endswith('@mgits.ac.in'):
+            flash('Email must be from the @mgits.ac.in domain.', 'danger')
+            return redirect('/register')
+
+        # Check if the email is not the admin email
+        if email == 'mitsstoremanager@gmail.com':
+            flash('Admin email cannot be used for registration.', 'danger')
+            return redirect('/register')
+
         otp = str(random.randint(100000, 999999))  # Generate a random 6-digit OTP
+        session['otp'] = otp  # Store OTP in session for verification
+        session['mut_id'] = mut_id  # Store mut_id in session for later use
+        session['email'] = email  # Store email in session for later use
+        session['password'] = password  # Store password in session for later use
 
-        try:
-            conn = sqlite3.connect('users.db', timeout=10)
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO users (mut_id, email, password, otp) VALUES (?, ?, ?, ?)', 
-                           (mut_id, email, password, otp))
-            conn.commit()
+        # Send OTP email
+        send_otp(email, otp)
 
-            # Send OTP email
-            send_otp(email, otp)
-
-            flash('Registration successful! Please check your email for the OTP.', 'success')
-            return redirect('/verify_otp')  # Redirect to OTP verification page
-        except sqlite3.IntegrityError:
-            flash('MUT ID or Email already exists.', 'danger')
-        except sqlite3.OperationalError as e:
-            flash('Database error: {}'.format(e), 'danger')
-        finally:
-            cursor.close()
-            conn.close()
+        flash('Registration successful! Please check your email for the OTP.', 'success')
+        return redirect('/verify_otp')  # Redirect to OTP verification page
 
     return render_template('register.html')
 
@@ -113,49 +120,33 @@ def send_otp(to_email, otp):
 @app.route('/verify_otp', methods=['GET', 'POST'])
 def verify_otp():
     if request.method == 'POST':
-        mut_id = request.form['mut_id']
         entered_otp = request.form['otp']
+        mut_id = session.get('mut_id')
+        email = session.get('email')
+        password = session.get('password')  # Retrieve password from session
 
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM users WHERE mut_id=? AND otp=?', (mut_id, entered_otp))
-        user = cursor.fetchone()
-
-        if user:
-            cursor.execute('UPDATE users SET is_verified=1 WHERE mut_id=?', (mut_id,))
-            conn.commit()
-            flash('Email verified successfully! You can now log in.', 'success')
-            return redirect('/login')
+        if entered_otp == session.get('otp'):
+            # OTP is correct, save user to the database
+            try:
+                conn = sqlite3.connect('users.db', timeout=10)
+                cursor = conn.cursor()
+                cursor.execute('INSERT INTO users (mut_id, email, password) VALUES (?, ?, ?)', 
+                               (mut_id, email, password))  # Use password from session
+                conn.commit()
+                flash('Email verified successfully! You can now log in.', 'success')
+                return redirect('/login')
+            except sqlite3.IntegrityError:
+                flash('MUT ID or Email already exists.', 'danger')
+            except sqlite3.OperationalError as e:
+                flash('Database error: {}'.format(e), 'danger')
+            finally:
+                cursor.close()
+                conn.close()
         else:
-            # Send alert email for incorrect OTP
-            cursor.execute('SELECT email FROM users WHERE mut_id=?', (mut_id,))
-            user_email = cursor.fetchone()
-            if user_email:
-                send_incorrect_otp_alert(user_email[0], mut_id)
-
             flash('Invalid OTP. Please try again.', 'danger')
-            return redirect('/login')  # Redirect to login page
-
-        conn.close()
+            return redirect('/verify_otp')  # Redirect to OTP verification page
 
     return render_template('verify_otp.html')
-
-def send_incorrect_otp_alert(to_email, mut_id):
-    subject = "Incorrect OTP Attempt"
-    body = f"""
-    <h1>Incorrect OTP Attempt</h1>
-    <p>There was an incorrect OTP attempt for the account with MUT ID: <strong>{mut_id}</strong>.</p>
-    <p>If this was not you, please secure your account.</p>
-    """
-
-    msg = Message(subject, sender=app.config['MAIL_USERNAME'], recipients=[to_email])
-    msg.html = body
-
-    try:
-        mail.send(msg)
-        print("Alert email sent successfully!")
-    except Exception as e:
-        print(f"Failed to send alert email: {e}")
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -367,79 +358,6 @@ def pay_on_google_pay():
     flash('Payment initiated! A summary has been sent to your email.', 'success')
     return redirect('/home')
 
-@app.route('/profile', methods=['GET', 'POST'])
-def profile():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
-
-    user_id = session['user_id']
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-
-    if request.method == 'POST':
-        if 'profile_photo' in request.files:
-            profile_photo = request.files['profile_photo']
-            if profile_photo and allowed_file(profile_photo.filename):
-                filename = secure_filename(profile_photo.filename)
-                profile_photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                profile_photo.save(profile_photo_path)
-
-                cursor.execute('UPDATE users SET profile_photo=? WHERE id=?', (filename, user_id))
-                conn.commit()
-
-        new_password = request.form.get('new_password')
-        if new_password:
-            cursor.execute('UPDATE users SET password=? WHERE id=?', (new_password, user_id))
-            conn.commit()
-            flash('Password updated successfully!', 'success')
-
-    cursor.execute('SELECT mut_id, email, password, profile_photo FROM users WHERE id=?', (user_id,))
-    user = cursor.fetchone()
-    conn.close()
-
-    if user:
-        mut_id, email, password, profile_photo = user
-        return render_template('profile.html', mut_id=mut_id, email=email, password=password, profile_photo=profile_photo)
-    else:
-        flash('User  not found.', 'danger')
-        return redirect('/home')
-    
-
-@app.route('/upload_profile_photo', methods=['POST'])
-def upload_profile_photo():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
-
-    if 'profile_photo' not in request.files:
-        flash('No file part', 'danger')
-        return redirect('/profile')
-
-    file = request.files['profile_photo']
-
-    if file.filename == '':
-        flash('No selected file', 'danger')
-        return redirect('/profile')
-
-    if file and allowed_file(file.filename):
-        filename = secure_filename(f"{session['mut_id']}_{file.filename}")
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute("UPDATE users SET profile_photo=? WHERE mut_id=?", (filename, session['mut_id']))
-        conn.commit()
-        conn.close()
-
-        session['profile_photo'] = filename
-
-        flash('Profile photo updated successfully!', 'success')
-        return redirect('/profile')
-    else:
-        flash('Invalid file format. Please upload PNG, JPG, or JPEG.', 'danger')
-        return redirect('/profile')
 
 if __name__ == '__main__':
     app.run(debug=True)
