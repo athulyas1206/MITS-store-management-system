@@ -1,5 +1,6 @@
 import sqlite3
 import pandas as pd
+import csv
 
 def create_user_db():
     conn = sqlite3.connect('users.db')
@@ -107,7 +108,7 @@ def delete_print_order(order_id):
         # Close the connection
         conn.close()
 
-import sqlite3
+
 
 # Connect to SQLite (this will create 'stationary.db' if it doesn't exist)
 conn = sqlite3.connect('stationary.db')
@@ -123,21 +124,59 @@ cursor.execute('''
         category TEXT NOT NULL,
         price REAL NOT NULL,
         stock INTEGER NOT NULL,
-        image_url TEXT
+        image_url TEXT,
+        description TEXT,
+        rating INTEGER DEFAULT 0 CHECK (rating BETWEEN 0 AND 5),
+        rating_count INTEGER DEFAULT 0
     )
 ''')
-try:
-    # Try adding the 'description' column
-    cursor.execute("ALTER TABLE stationary_items ADD COLUMN description TEXT")
-    print("Column 'description' added successfully!")
-except sqlite3.OperationalError:
-    print("Column 'description' already exists. Skipping...")
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS cart (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
+    )
+''')
+
+# Create transactions table
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER NOT NULL,
+        total_cost REAL NOT NULL,
+        status TEXT DEFAULT 'pending',
+        purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
+    );
+    """)
+# Create s_order_history table
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS s_order_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER NOT NULL,
+        total_cost REAL NOT NULL,
+        status TEXT DEFAULT 'completed',
+        purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
+    );
+""")
+
 
 # Commit and close the connection
 conn.commit()
 conn.close()
 
 print("Database and table created successfully!")
+print("Cart table created successfully!")
+print("transactions table created successfully!")
+print("s_order_history table created successfully!")
 
 # Load the CSV file
 csv_file = "stationary_products_with_description.csv"
@@ -150,9 +189,9 @@ cursor = conn.cursor()
 # Insert products into the table (WITHOUT manually setting id)
 for index, row in df.iterrows():
     cursor.execute("""
-        INSERT INTO stationary_items (name, category, price, stock, image_url, description) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (row["name"], row["category"], row["price"], row["stock"], row["image_url"], row["description"]))
+        INSERT INTO stationary_items (name, category, price, stock, image_url, description, rating, rating_count) 
+        VALUES (?, ?, ?, ?, ?, ?,?,?)
+    """, (row["name"], row["category"], row["price"], row["stock"], row["image_url"], row["description"], row["rating"], row["rating_count"]))
 
 # Commit and close the connection
 conn.commit()
@@ -160,25 +199,12 @@ conn.close()
 
 print("Products inserted successfully!")
 
-conn = sqlite3.connect("stationary.db")
-cursor = conn.cursor()
 
-# Create transactions table if it doesn't exist
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS transactions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER NOT NULL,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
-    )
-""")
 
-conn.commit()
-conn.close()
 
-print("Transactions table created successfully!")
+
+
+
 
 
 
