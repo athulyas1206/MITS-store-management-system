@@ -154,6 +154,19 @@ cursor.execute("""
         FOREIGN KEY (product_id) REFERENCES stationary_items(id)
     );
     """)
+# Create s_order_history table
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS s_order_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER NOT NULL,
+        total_cost REAL NOT NULL,
+        status TEXT DEFAULT 'completed',
+        purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES stationary_items(id)
+    );
+""")
 
 
 # Commit and close the connection
@@ -163,6 +176,7 @@ conn.close()
 print("Database and table created successfully!")
 print("Cart table created successfully!")
 print("transactions table created successfully!")
+print("s_order_history table created successfully!")
 
 # Load the CSV file
 csv_file = "stationary_products_with_description.csv"

@@ -13,8 +13,8 @@ app.secret_key = 'your_secret_key'  # Required for session management
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-UPLOAD_FOLDER = 'static/profile_pics'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'pdf'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -55,25 +55,157 @@ def login():
     return render_template('login.html')
 
 
+
+
+
 @app.route('/admin_dashboard')
 def admin_dashboard():
-    # Check if the user is admin
-    if session.get('mut_id') != 'admin':
-        flash('Unauthorized access.', 'danger')
-        return redirect('/login')
+    return render_template('admin.html')
 
-    # Fetch all print orders from the database
+@app.route('/admin_print_orders')
+def admin_print_orders():
+    # Connect to SQLite
     conn = sqlite3.connect('print_orders.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM print_orders ORDER BY expected_datetime DESC')
+
+    # Fetch active print orders
+    cursor.execute("""
+        SELECT id, mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, status
+        FROM print_orders
+        WHERE status != 'Completed'
+        ORDER BY expected_datetime ASC
+    """)
+
     orders = cursor.fetchall()
-    
-    # Fetch completed orders (order history)
-    cursor.execute("SELECT * FROM print_orders")
-    order_history = cursor.fetchall()
     conn.close()
 
-    return render_template('admin.html', orders=orders ,order_history=order_history)
+    return render_template('admin_print_orders.html', orders=orders)
+
+@app.route('/update_print_order/<int:order_id>')
+def update_print_order(order_id):
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Fetch the order details
+    cursor.execute("SELECT * FROM print_orders WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    if order:
+        # Move order to order_history
+        cursor.execute("""
+            INSERT INTO order_history (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (order[1], order[2], order[3], order[4], order[5], order[6], order[7]))
+
+        # Delete the order from print_orders
+        cursor.execute("DELETE FROM print_orders WHERE id = ?", (order_id,))
+
+        conn.commit()
+
+    conn.close()
+
+    return redirect('/admin_print_orders')
+
+@app.route('/admin_print_history')
+def admin_print_history():
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Fetch all completed print orders from order_history
+    cursor.execute("SELECT * FROM order_history ORDER BY id DESC")
+    history_orders = cursor.fetchall()
+
+    conn.close()
+    return render_template('admin_print_history.html', history_orders=history_orders)
+
+
+
+
+@app.route('/admin_stationary_items')
+def admin_stationary_items():
+    # Connect to the SQLite database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+
+    # Fetch all the items from the stationary_items table
+    cursor.execute("SELECT * FROM stationary_items")
+    items = cursor.fetchall()
+
+    # Close the connection
+    conn.close()
+
+    # Render the template with the items
+    return render_template('admin_stationary_items.html', items=items)
+
+@app.route('/admin_stationary_orders')
+def admin_stationary_orders():
+    # Connect to SQLite
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+
+    # Fetch pending stationary orders along with product details
+    cursor.execute("""
+        SELECT t.id, t.user_id, si.name, t.quantity, t.total_cost, t.status, t.purchase_date
+        FROM transactions t
+        JOIN stationary_items si ON t.product_id = si.id
+        WHERE t.status = 'pending'
+    """)
+    orders = cursor.fetchall()
+
+    # Close connection
+    conn.close()
+
+    return render_template('admin_stationary_orders.html', orders=orders)
+
+@app.route('/update_order/<int:order_id>')
+def update_order(order_id):
+    # Connect to SQLite
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+
+    # Fetch order details before moving to history
+    cursor.execute("SELECT * FROM transactions WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    if order:
+        # Move order to s_order_history
+        cursor.execute("""
+            INSERT INTO s_order_history (user_id, product_id, quantity, total_cost, status, purchase_date)
+            VALUES (?, ?, ?, ?, 'completed', ?)
+        """, (order[1], order[2], order[3], order[4], order[6]))
+
+        # Delete the order from transactions
+        cursor.execute("DELETE FROM transactions WHERE id = ?", (order_id,))
+
+        conn.commit()
+
+    conn.close()
+
+    return redirect('/admin_stationary_orders')
+
+@app.route('/admin_stationary_history')
+def admin_stationary_history():
+    # Connect to SQLite
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+
+    # Fetch completed stationary orders
+    cursor.execute("""
+        SELECT s_order_history.id, s_order_history.user_id, stationary_items.name, 
+               s_order_history.quantity, s_order_history.total_cost, s_order_history.purchase_date 
+        FROM s_order_history 
+        JOIN stationary_items ON s_order_history.product_id = stationary_items.id
+        ORDER BY s_order_history.purchase_date DESC
+    """)
+    
+    orders = cursor.fetchall()
+    conn.close()
+
+    return render_template('admin_stationary_history.html', orders=orders)
+
+
+
+
 
 
 
@@ -87,6 +219,26 @@ def update_status():
         cursor.execute("UPDATE print_orders SET status = ? WHERE id = ?", (new_status, order_id))
         conn.commit()
         conn.close()
+
+@app.route('/update_stationary_order/<int:order_id>/<new_status>', methods=['POST'])
+def update_stationary_order(order_id, new_status):
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+    
+    # Update the order status
+    cursor.execute("UPDATE transactions SET status = ? WHERE id = ?", (new_status, order_id))
+    
+    # If order is completed, move to s_order_history
+    if new_status == 'completed':
+        cursor.execute("INSERT INTO s_order_history SELECT * FROM transactions WHERE id = ?", (order_id,))
+        cursor.execute("DELETE FROM transactions WHERE id = ?", (order_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"success": True})
+
+
 
         
 @app.route('/upload/<filename>')
@@ -171,7 +323,7 @@ def create_print_orders():
         num_pages = len(pdf_reader.pages)
 
         # Calculate total cost
-        cost_per_page = 2 if print_type == 'black_white' else 5
+        cost_per_page = 1.5 if print_type == 'black_white' else 5
         total_cost = num_pages * cost_per_page * copies
 
         # Insert order details into database
@@ -210,42 +362,7 @@ def order_summary():
         flash('No order found.', 'danger')
         return redirect('/print_orders')
 
-@app.route('/delete_order/<int:order_id>', methods=['POST'])
-def delete_order(order_id):
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
 
-    #  Retrieve the order details before deleting
-    cursor.execute("SELECT mut_id, copies, layout, print_type, print_sides, expected_datetime FROM print_orders WHERE id = ?", (order_id,))
-    order = cursor.fetchone()
-
-    if order:
-        #  Print query for debugging
-        print("Order found:", order)
-
-        #  Insert into order_history (columns must match exactly)
-        cursor.execute("""
-            INSERT INTO order_history (mut_id, copies, layout, print_type, print_sides, expected_datetime)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, order)
-
-        conn.commit()  # Commit after inserting into history
-
-        #  Now delete only from print_orders
-        cursor.execute("DELETE FROM print_orders WHERE id = ?", (order_id,))
-        conn.commit()  # Commit the deletion
-
-    conn.close()
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/order_history')
-def order_history():
-    conn = sqlite3.connect("print_orders.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM order_history ORDER BY deleted_at DESC")
-    orders = cursor.fetchall()
-    conn.close()
-    return render_template("admin.html", orders=orders)
 
 
 
@@ -352,7 +469,8 @@ def stationary():
     cursor = conn.cursor()
     
     # Fetch all stationary items
-    cursor.execute("SELECT id, name, category, price, stock, image_url, description, rating FROM stationary_items")
+    cursor.execute('''SELECT id, name, category, price, stock, image_url, description, rating FROM stationary_items
+                   order by rating DESC''')
     items = cursor.fetchall()
     
     # Close connection
@@ -592,6 +710,28 @@ def buy_cart_items():
     conn.close()
 
     return redirect(url_for('s_orders'))  # Redirect to orders page
+
+def move_order_to_history(order_id):
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    # Get order details
+    cursor.execute("SELECT * FROM transactions WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    if order:
+        # Insert into history
+        cursor.execute("""
+            INSERT INTO s_order_history (user_id, product_id, quantity, total_cost, status, purchase_date)
+            VALUES (?, ?, ?, ?, 'completed', ?)
+        """, (order[1], order[2], order[3], order[4], order[6]))
+
+        # Delete from transactions
+        cursor.execute("DELETE FROM transactions WHERE id = ?", (order_id,))
+    
+    conn.commit()
+    conn.close()
+
 
 
 
