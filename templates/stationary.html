@@ -13,7 +13,7 @@
     <!-- Heading with Back Button -->
     <div class="bg-primary text-white p-3 d-flex align-items-center justify-content-between">
         <a href="{{ url_for('home') }}" class="btn btn-warning">Back to Home</a>
-        <h1 class="m-0">Stationary Items</h1>
+        <h1 class="m-0 text-center flex-grow-1">Stationary Items</h1>
     </div>
 
     <!-- Navigation Bar for Categories -->
@@ -122,14 +122,55 @@
                 updateStars(ratingDiv, starIndex);
             });
         });
-
-        function updateStars(ratingDiv, ratingValue) {
-            let stars = "";
-            for (let i = 1; i <= 5; i++) {
-                stars += i <= ratingValue ? "★" : "☆";
-            }
-            ratingDiv.innerHTML = stars;
-        }
     </script>
+
+    <style>
+        ::-webkit-scrollbar {
+            display: none;
+            /* Hides the scrollbar */
+        }
+
+        .item-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 12px;
+            /* Improved rounded corners */
+            overflow: hidden;
+            /* Prevents image overflow */
+            padding: 10px;
+            /* Increased card size */
+        }
+
+        .item-card img {
+            height: 150px;
+            /* Ensures consistent image size */
+            width: 100%;
+            /* Full width for image */
+            object-fit: contain;
+            /* Ensures images scale properly */
+            background-color: #f8f9fa;
+            /* Subtle background to improve look */
+            padding: 0px;
+            /* Adds space around the image */
+        }
+
+        .card-img-top {
+            height: 180px;
+            /* Increased image size */
+            object-fit: contain;
+            /* Ensures full image visibility */
+            padding: 10px;
+            /* Adds space around the image */
+        }
+
+        .item-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-body {
+            padding: 10px;
+        }
+    </style>
 </body>
+
 </html>
