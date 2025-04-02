@@ -447,36 +447,6 @@ def order_summary():
 
     return render_template('order_summary.html', **order_details)
 
-@app.route('/confirm_order', methods=['POST'])
-def confirm_order():
-    order_details = session.get('order_details')
-    
-    if not order_details:
-        flash('No order details found. Please create an order first.', 'danger')
-        return redirect('/print_orders')
-
-    # Save the order to the database
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT num_pages, copies, total_cost 
-        FROM print_orders 
-        WHERE mut_id=? 
-        ORDER BY id DESC LIMIT 1
-    ''', (mut_id,))
-    order = cursor.fetchone()
-    conn.close()
-
-    if order:
-        num_pages, copies, total_cost = order
-        return render_template('order_summary.html', num_pages=num_pages, copies=copies, total_cost=total_cost)
-    else:
-        flash('No order found.', 'danger')
-        return redirect('/print_orders')
-
-
-
-
 
 @app.route('/profile')
 def profile():
@@ -554,6 +524,44 @@ def edit_profile():
     session.pop('order_details', None)
     flash('Order confirmed! A summary has been sent to your email.', 'success')
     return redirect('/home')
+
+@app.route('/confirm_order', methods=['POST'])
+def confirm_order():
+    order_details = session.get('order_details')
+    
+    if not order_details:
+        flash('No order details found. Please create an order first.', 'danger')
+        return redirect('/print_orders')
+
+    # Save the order to the database
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO print_orders (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, num_pages, total_cost)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (order_details['mut_id'], order_details['copies'], order_details['layout'], 
+          order_details['print_type'], order_details['print_sides'], order_details['expected_datetime'], 
+          order_details['pdf_filename'], order_details['num_pages'], order_details['total_cost']))
+    conn.commit()
+    conn.close()
+
+    # Fetch user email from the database
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT email FROM users WHERE mut_id=?', (order_details['mut_id'],))
+    user = cursor.fetchone()
+    conn.close()
+
+    if user:
+        user_email = user[0]
+        # Send order summary email
+        send_order_summary_email(user_email, order_details['num_pages'], order_details['copies'], order_details['total_cost'])
+
+    # Clear the order details from the session
+    session.pop('order_details', None)
+    flash('Order confirmed! A summary has been sent to your email.', 'success')
+    return redirect('/home')
+
 
 
 def send_order_summary_email(to_email, num_pages, copies, total_cost):
