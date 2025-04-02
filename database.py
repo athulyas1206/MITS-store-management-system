@@ -212,6 +212,20 @@ conn.commit()
 conn.close()
 
 print("Products inserted successfully!")
+def get_transaction_data():
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT user_id, product_id, COUNT(product_id) as purchase_count 
+        FROM transactions 
+        GROUP BY user_id, product_id
+    """)
+    
+    data = cursor.fetchall()
+    conn.close()
+    
+    return data
 
 
 

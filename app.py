@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from PyPDF2 import PdfReader
 from math import ceil
-
+from recommendation import get_recommendations
 from flask_mail import Mail, Message
 import random
 import re  # Import regex for validation
@@ -641,21 +641,50 @@ def cancel_order():
 
 
 
+from recommendation import get_recommendations
+
 @app.route('/stationary')
 def stationary():
-    # Connect to the database
     conn = sqlite3.connect('stationary.db')
     cursor = conn.cursor()
-    
-    # Fetch all stationary items
-    cursor.execute('''SELECT id, name, category, price, stock, image_url, description, rating FROM stationary_items
-                   order by rating DESC''')
+
+    user_id = session.get("user_id")
+
+    # Fetch all stationary items sorted by rating
+    cursor.execute('''
+        SELECT id, name, category, price, stock, image_url, description, rating 
+        FROM stationary_items 
+        ORDER BY rating DESC
+    ''')
     items = cursor.fetchall()
-    
-    # Close connection
+
+    # Fetch recommended items using AI-based recommendations
+    recommended_items = []
+    if user_id:
+        recommended_product_ids = get_recommendations(user_id, top_n=5)
+        
+        if recommended_product_ids:
+            query = f'''
+                SELECT id, name, category, price, stock, image_url, description, rating
+                FROM stationary_items
+                WHERE id IN ({",".join("?" * len(recommended_product_ids))})
+            '''
+            cursor.execute(query, recommended_product_ids)
+            recommended_items = cursor.fetchall()
+
+    # Fallback: If no personalized recommendations, show trending items
+    if not recommended_items:
+        cursor.execute('''
+            SELECT id, name, category, price, stock, image_url, description, rating
+            FROM stationary_items
+            ORDER BY rating DESC
+            LIMIT 5
+        ''')
+        recommended_items = cursor.fetchall()
+
     conn.close()
-    
-    return render_template('stationary.html', items=items)
+    return render_template('stationary.html', items=items, recommended_items=recommended_items)
+
 
 @app.route('/product/<int:product_id>')
 def product_details(product_id):
