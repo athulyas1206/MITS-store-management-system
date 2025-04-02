@@ -23,8 +23,8 @@ app.config['MAIL_USE_SSL'] = True
 
 mail = Mail(app)
 
-#UPLOAD_FOLDER = 'static/profile_pics'
-#ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+UPLOAD_FOLDER = 'static/profile_pics'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -511,22 +511,38 @@ def edit_profile():
     user_id = session['user_id']
 
     # Connect to the database
-    # Fetch user email from the database
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT email FROM users WHERE mut_id=?', (order_details['mut_id'],))
+
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        photo = request.files['photo']
+
+        # Update profile picture if a new one is uploaded
+        if photo and allowed_file(photo.filename):
+            filename = secure_filename(f"{user_id}_{photo.filename}")
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo.save(photo_path)
+
+            # Save file path in the database
+            cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
+
+        # Update email and password
+        cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, user_id))
+
+        conn.commit()
+        conn.close()
+
+        flash('Profile updated successfully!', 'success')
+        return redirect('/edit_profile')
+
+    # Fetch current user data
+    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (user_id,))
     user = cursor.fetchone()
     conn.close()
 
-    if user:
-        user_email = user[0]
-        # Send order summary email
-        send_order_summary_email(user_email, order_details['num_pages'], order_details['copies'], order_details['total_cost'])
-
-    # Clear the order details from the session
-    session.pop('order_details', None)
-    flash('Order confirmed! A summary has been sent to your email.', 'success')
-    return redirect('/home')
+    return render_template('edit_profile.html', user=user)
 
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
