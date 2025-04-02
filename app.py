@@ -341,21 +341,7 @@ def verify_otp():
 
     return render_template('verify_otp.html')
 
-@app.route('/admin_dashboard')
-def admin_dashboard():
-    if session.get('mut_id') != 'admin':
-        flash('Unauthorized access.', 'danger')
-        return redirect('/login')
 
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM print_orders ORDER BY expected_datetime DESC')
-    orders = cursor.fetchall()
-    cursor.execute("SELECT * FROM print_orders")
-    order_history = cursor.fetchall()
-    conn.close()
-
-    return render_template('admin.html', orders=orders, order_history=order_history)
 
 @app.route('/delete_order/<int:order_id>', methods=['POST'])
 def delete_order(order_id):
