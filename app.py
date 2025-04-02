@@ -371,20 +371,9 @@ def order_history():
     conn.close()
     return render_template("admin.html", orders=orders)
 
-@app.route('/update_status', methods=['POST'])
-def update_status():
-    order_id = request.form['order_id']
-    new_status = request.form['status']
 
-    conn = sqlite3.connect("print_orders.db")
-    cursor = conn.cursor()
-    cursor.execute("UPDATE print_orders SET status = ? WHERE id = ?", (new_status, order_id))
-    conn.commit()
-    conn.close()
 
-@app.route('/upload/<filename>')
-def upload(filename):
-    return f"File {filename} uploaded successfully!"
+
 
 @app.route('/home')
 def home():
