@@ -641,7 +641,7 @@ def cancel_order():
 
 
 
-from recommendation import get_recommendations
+
 
 @app.route('/stationary')
 def stationary():
@@ -663,6 +663,8 @@ def stationary():
     if user_id:
         recommended_product_ids = get_recommendations(user_id, top_n=5)
         
+        print("Recommended Product IDs:", recommended_product_ids)  # Debugging line ✅
+
         if recommended_product_ids:
             query = f'''
                 SELECT id, name, category, price, stock, image_url, description, rating
@@ -671,6 +673,7 @@ def stationary():
             '''
             cursor.execute(query, recommended_product_ids)
             recommended_items = cursor.fetchall()
+            print("Fetched Recommended Items:", recommended_items)  # Debugging line ✅
 
     # Fallback: If no personalized recommendations, show trending items
     if not recommended_items:

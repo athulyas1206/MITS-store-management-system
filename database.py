@@ -2,18 +2,7 @@ import sqlite3
 import pandas as pd
 import csv
 
-#i add
-def check_table_structure():
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute("PRAGMA table_info(users);")
-    columns = cursor.fetchall()
-    for column in columns:
-        print(column)
-    conn.close()
-
-check_table_structure()
-
+def create_user_db():
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
     cursor.execute('''
@@ -21,15 +10,13 @@ check_table_structure()
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             mut_id TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
+            password TEXT NOT NULL
         )
     ''')
-    
     try:
-       cursor.execute("ALTER TABLE users ADD COLUMN name TEXT NOT NULL;")
+        cursor.execute("ALTER TABLE users ADD COLUMN photo TEXT DEFAULT 'static/profile_pics/default.jpg';")
     except sqlite3.OperationalError:
-        print("Column 'name' already exists.")
-
+        print("Column 'photo' already exists.")
 
 
     conn.commit()   # Save changes
@@ -212,6 +199,7 @@ conn.commit()
 conn.close()
 
 print("Products inserted successfully!")
+
 def get_transaction_data():
     conn = sqlite3.connect("stationary.db")
     cursor = conn.cursor()
@@ -226,14 +214,6 @@ def get_transaction_data():
     conn.close()
     
     return data
-
-
-
-
-
-
-
-
 
 
 
