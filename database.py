@@ -16,6 +16,7 @@ def create_user_db():
     except sqlite3.OperationalError:
         print("Column 'photo' already exists.")
 
+
     conn.commit()   # Save changes
     conn.close() 
 
