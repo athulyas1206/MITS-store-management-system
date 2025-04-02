@@ -42,10 +42,9 @@
             transition: all 0.3s ease-in-out;
         }
         .print-orders-card {
-        background: linear-gradient(45deg, #FACC15, #F59E0B);
-        color: white;
+            background: linear-gradient(45deg, #FACC15, #F59E0B);
+            color: white;
         }
-
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
@@ -58,7 +57,6 @@
             border: none;
         }
     </style>
-    
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -84,10 +82,8 @@
                             <li><a class="dropdown-item" href="/profile">View Profile</a></li>
                             <li><a class="dropdown-item" href="/logout">Log Out</a></li>
                         </ul>
-                
                     </li>
                 </ul>
-                
             </div>
         </div>
     </nav>
@@ -98,6 +94,19 @@
             <h1 class="fw-bold">Welcome to MITS Store</h1>
             <p class="lead">Your one-stop shop for prints, stationery, and more.</p>
         </div>
+    </div>
+
+    <!-- Flash Message Display -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert alert-info">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
     </div>
 
     <!-- Main Content Sections -->

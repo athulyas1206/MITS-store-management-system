@@ -57,7 +57,7 @@ def login():
         if user:
             session['user_id'] = user[0]  # Store user ID in session
             session['mut_id'] = user[1]  # Store MUT ID in session
-            flash('Login successful!', 'success')
+
             return redirect('/home')
         else:
             flash('Invalid MUT ID or Password. Try again.', 'danger')
@@ -212,7 +212,7 @@ def home():
     if 'user_id' in session:
         return render_template('home.html', mut_id=session['mut_id'])
     else:
-        flash('Please log in first.', 'warning')
+        
         return redirect('/login')
 
 @app.route('/logout')
@@ -255,62 +255,70 @@ def create_print_orders():
         cost_per_page = 2 if print_type == 'black_white' else 5
         total_cost = num_pages * cost_per_page * copies
 
-        conn = sqlite3.connect('print_orders.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO print_orders (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, num_pages, total_cost)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, num_pages, total_cost))
-        conn.commit()
-        conn.close()
+        # Store order details in session
+        session['order_details'] = {
+            'mut_id': mut_id,
+            'copies': copies,
+            'layout': layout,
+            'print_type': print_type,
+            'print_sides': print_sides,
+            'expected_datetime': expected_datetime,
+            'pdf_filename': pdf_filename,
+            'num_pages': num_pages,
+            'total_cost': total_cost
+        }
 
-        # Fetch user email from the database
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT email FROM users WHERE mut_id=?', (mut_id,))
-        user = cursor.fetchone()
-        conn.close()
-
-        if user:
-            user_email = user[0]
-            #send_order_summary_email(user_email, num_pages, copies, total_cost)
-
-        flash('Order saved successfully! Proceed to payment.', 'success')
-        return redirect('/order_summary')
+        return redirect('/order_summary')  # Redirect to order summary page
 
     return render_template('print_orders.html')
 
-@app.route('/order_summary')
+@app.route('/order_summary', methods=['GET', 'POST'])
 def order_summary():
-    mut_id = session.get('mut_id')
+    order_details = session.get('order_details')
+    
+    if not order_details:
+        flash('No order details found. Please create an order first.', 'danger')
+        return redirect('/print_orders')
+
+    return render_template('order_summary.html', **order_details)
+
+@app.route('/confirm_order', methods=['POST'])
+def confirm_order():
+    order_details = session.get('order_details')
+    
+    if not order_details:
+        flash('No order details found. Please create an order first.', 'danger')
+        return redirect('/print_orders')
+
+    # Save the order to the database
     conn = sqlite3.connect('print_orders.db')
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT num_pages, copies, total_cost 
-        FROM print_orders 
-        WHERE mut_id=? 
-        ORDER BY id DESC LIMIT 1
-    ''', (mut_id,))
-    order = cursor.fetchone()
+        INSERT INTO print_orders (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, num_pages, total_cost)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (order_details['mut_id'], order_details['copies'], order_details['layout'], 
+          order_details['print_type'], order_details['print_sides'], order_details['expected_datetime'], 
+          order_details['pdf_filename'], order_details['num_pages'], order_details['total_cost']))
+    conn.commit()
     conn.close()
 
-    if order:
-        num_pages, copies, total_cost = order
-        
-        conn = sqlite3.connect('users.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT email FROM users WHERE mut_id=?', (mut_id,))
-        user = cursor.fetchone()
-        conn.close()
+    # Fetch user email from the database
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT email FROM users WHERE mut_id=?', (order_details['mut_id'],))
+    user = cursor.fetchone()
+    conn.close()
 
-        if user:
-            user_email = user[0]
-            send_order_summary_email(user_email, num_pages, copies, total_cost)
+    if user:
+        user_email = user[0]
+        # Send order summary email
+        send_order_summary_email(user_email, order_details['num_pages'], order_details['copies'], order_details['total_cost'])
 
-        return render_template('order_summary.html', num_pages=num_pages, copies=copies, total_cost=total_cost)
-    else:
-        flash('No order found.', 'danger')
-        return redirect('/home')
+    # Clear the order details from the session
+    session.pop('order_details', None)
+    flash('Order confirmed! A summary has been sent to your email.', 'success')
+    return redirect('/home')
+
 
 def send_order_summary_email(to_email, num_pages, copies, total_cost):
     subject = "Your Order Summary"
@@ -332,6 +340,9 @@ def send_order_summary_email(to_email, num_pages, copies, total_cost):
         print("Email sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
+
+
+
 
 @app.route('/pay_on_google_pay', methods=['POST'])
 def pay_on_google_pay():
@@ -357,6 +368,13 @@ def pay_on_google_pay():
 
     flash('Payment initiated! A summary has been sent to your email.', 'success')
     return redirect('/home')
+
+@app.route('/cancel_order')
+def cancel_order():
+    # Set a flash message indicating the order has been canceled
+    flash('Your order is cancelled.', 'info')
+    return redirect(url_for('home'))
+
 
 
 if __name__ == '__main__':
