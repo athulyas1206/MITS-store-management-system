@@ -9,6 +9,8 @@ from math import ceil
 from flask_mail import Mail, Message
 import random
 import re  # Import regex for validation
+import win32print
+import win32api
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for session management
@@ -29,6 +31,17 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+
+def print_pdf(pdf_path):
+    """ Sends a PDF file to the default printer """
+    printer_name = win32print.GetDefaultPrinter()  # Get default printer
+    if not os.path.exists(pdf_path):
+        print("File not found:", pdf_path)
+        return
+    
+    win32api.ShellExecute(0, "print", pdf_path, None, ".", 0)
+    print(f"Sent {pdf_path} to printer: {printer_name}")
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -43,6 +56,23 @@ def validate_user(mut_id, password):
 @app.route('/')
 def index():
     return redirect('/login')
+
+@app.route('/print_order/<int:order_id>')
+def print_order(order_id):
+    """ Fetch the PDF file path and send it to the printer """
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT pdf_filename FROM print_orders WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    conn.close()
+
+    if order:
+        pdf_path = os.path.join("uploads", order[0])  # Ensure your PDFs are stored in 'uploads' folder
+        print_pdf(pdf_path)
+
+    return redirect(url_for('admin_print_orders'))  # Redirect back to admin page
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -459,21 +489,30 @@ def confirm_order():
     conn = sqlite3.connect('print_orders.db')
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT num_pages, copies, total_cost 
-        FROM print_orders 
-        WHERE mut_id=? 
-        ORDER BY id DESC LIMIT 1
-    ''', (mut_id,))
-    order = cursor.fetchone()
+        INSERT INTO print_orders (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, num_pages, total_cost)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (order_details['mut_id'], order_details['copies'], order_details['layout'], 
+          order_details['print_type'], order_details['print_sides'], order_details['expected_datetime'], 
+          order_details['pdf_filename'], order_details['num_pages'], order_details['total_cost']))
+    conn.commit()
     conn.close()
 
-    if order:
-        num_pages, copies, total_cost = order
-        return render_template('order_summary.html', num_pages=num_pages, copies=copies, total_cost=total_cost)
-    else:
-        flash('No order found.', 'danger')
-        return redirect('/print_orders')
+    # Fetch user email from the database
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT email FROM users WHERE mut_id=?', (order_details['mut_id'],))
+    user = cursor.fetchone()
+    conn.close()
 
+    if user:
+        user_email = user[0]
+        # Send order summary email
+        send_order_summary_email(user_email, order_details['num_pages'], order_details['copies'], order_details['total_cost'])
+
+    # Clear the order details from the session
+    session.pop('order_details', None)
+    flash('Order confirmed! A summary has been sent to your email.', 'success')
+    return redirect('/home')
 
 
 

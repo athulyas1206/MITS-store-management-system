@@ -45,6 +45,7 @@
                     <th>PDF File</th>
                     <th>Status</th>
                     <th>Actions</th>
+                    <th>Print</th>
                 </tr>
             </thead>
             <tbody>
@@ -57,10 +58,13 @@
                     <td>{{ order[4] }}</td>
                     <td>{{ order[5] }}</td>
                     <td>{{ order[6] }}</td>
-                    <td><a href="/static/uploads/{{ order[7] }}" target="_blank" >View</a></td>
+                    <td><a href="/static/profile_pics/{{ order[7] }}" target="_blank" >View</a></td>
                     <td>{{ order[8] }}</td>
                     <td>
                         <a href="{{ url_for('update_print_order', order_id=order[0]) }}" class="btn btn-success btn-sm">Complete</a>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('print_order', order_id=order[0]) }}" class="btn btn-success btn-sm">Print</a>
                     </td>
                 </tr>
                 {% endfor %}
