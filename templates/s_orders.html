@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px; }
+        .orders-container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1); }
+        .order-item { border-bottom: 1px solid #ddd; padding: 10px 0; }
+        .order-item:last-child { border-bottom: none; }
+        .status { font-weight: bold; color: green; }
+    </style>
+</head>
+<body>
+
+    <div class="orders-container">
+        <h2>My Orders</h2>
+
+        {% if orders %}
+            {% for order in orders %}
+                <div class="order-item">
+                    <p><strong>{{ order[1] }}</strong></p>
+                    <p>Quantity: {{ order[2] }}</p>
+                    <p>Total Cost: ₹{{ order[3] }}</p>
+                    <p>Status: <span class="status">{{ order[4] }}</span></p>
+                    <p>Ordered on: {{ order[5] }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No orders found.</p>
+        {% endif %}
+    </div>
+
+</body>
+</html>

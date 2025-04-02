@@ -4,13 +4,24 @@ import sqlite3
 import os
 from datetime import datetime
 from PyPDF2 import PdfReader
+from math import ceil
 
+from flask_mail import Mail, Message
+import random
+import re  # Import regex for validation
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for session management
 
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# Configure Flask-Mail
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USERNAME'] = 'mitsstoremanager@gmail.com'  # Replace with your email
+app.config['MAIL_PASSWORD'] = 'avvj xaom hmyc zumk'  # Replace with your email password or app password
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
+
+mail = Mail(app)
 
 #UPLOAD_FOLDER = 'static/profile_pics'
 #ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -28,7 +39,6 @@ def validate_user(mut_id, password):
 
 @app.route('/')
 def index():
-    # Redirect to login page as the landing page
     return redirect('/login')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -46,7 +56,7 @@ def login():
         if user:
             session['user_id'] = user[0]  # Store user ID in session
             session['mut_id'] = user[1]  # Store MUT ID in session
-            flash('Login successful!', 'success')
+
             return redirect('/home')
         else:
             flash('Invalid MUT ID or Password. Try again.', 'danger')
@@ -54,25 +64,157 @@ def login():
     return render_template('login.html')
 
 
+
+
+
 @app.route('/admin_dashboard')
 def admin_dashboard():
-    # Check if the user is admin
-    if session.get('mut_id') != 'admin':
-        flash('Unauthorized access.', 'danger')
-        return redirect('/login')
+    return render_template('admin.html')
 
-    # Fetch all print orders from the database
+@app.route('/admin_print_orders')
+def admin_print_orders():
+    # Connect to SQLite
     conn = sqlite3.connect('print_orders.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM print_orders ORDER BY expected_datetime DESC')
+
+    # Fetch active print orders
+    cursor.execute("""
+        SELECT id, mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, status
+        FROM print_orders
+        WHERE status != 'Completed'
+        ORDER BY expected_datetime ASC
+    """)
+
     orders = cursor.fetchall()
-    
-    # Fetch completed orders (order history)
-    cursor.execute("SELECT * FROM print_orders")
-    order_history = cursor.fetchall()
     conn.close()
 
-    return render_template('admin.html', orders=orders ,order_history=order_history)
+    return render_template('admin_print_orders.html', orders=orders)
+
+@app.route('/update_print_order/<int:order_id>')
+def update_print_order(order_id):
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Fetch the order details
+    cursor.execute("SELECT * FROM print_orders WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    if order:
+        # Move order to order_history
+        cursor.execute("""
+            INSERT INTO order_history (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (order[1], order[2], order[3], order[4], order[5], order[6], order[7]))
+
+        # Delete the order from print_orders
+        cursor.execute("DELETE FROM print_orders WHERE id = ?", (order_id,))
+
+        conn.commit()
+
+    conn.close()
+
+    return redirect('/admin_print_orders')
+
+@app.route('/admin_print_history')
+def admin_print_history():
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Fetch all completed print orders from order_history
+    cursor.execute("SELECT * FROM order_history ORDER BY id DESC")
+    history_orders = cursor.fetchall()
+
+    conn.close()
+    return render_template('admin_print_history.html', history_orders=history_orders)
+
+
+
+
+@app.route('/admin_stationary_items')
+def admin_stationary_items():
+    # Connect to the SQLite database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+
+    # Fetch all the items from the stationary_items table
+    cursor.execute("SELECT * FROM stationary_items")
+    items = cursor.fetchall()
+
+    # Close the connection
+    conn.close()
+
+    # Render the template with the items
+    return render_template('admin_stationary_items.html', items=items)
+
+@app.route('/admin_stationary_orders')
+def admin_stationary_orders():
+    # Connect to SQLite
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+
+    # Fetch pending stationary orders along with product details
+    cursor.execute("""
+        SELECT t.id, t.user_id, si.name, t.quantity, t.total_cost, t.status, t.purchase_date
+        FROM transactions t
+        JOIN stationary_items si ON t.product_id = si.id
+        WHERE t.status = 'pending'
+    """)
+    orders = cursor.fetchall()
+
+    # Close connection
+    conn.close()
+
+    return render_template('admin_stationary_orders.html', orders=orders)
+
+@app.route('/update_order/<int:order_id>')
+def update_order(order_id):
+    # Connect to SQLite
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+
+    # Fetch order details before moving to history
+    cursor.execute("SELECT * FROM transactions WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    if order:
+        # Move order to s_order_history
+        cursor.execute("""
+            INSERT INTO s_order_history (user_id, product_id, quantity, total_cost, status, purchase_date)
+            VALUES (?, ?, ?, ?, 'completed', ?)
+        """, (order[1], order[2], order[3], order[4], order[6]))
+
+        # Delete the order from transactions
+        cursor.execute("DELETE FROM transactions WHERE id = ?", (order_id,))
+
+        conn.commit()
+
+    conn.close()
+
+    return redirect('/admin_stationary_orders')
+
+@app.route('/admin_stationary_history')
+def admin_stationary_history():
+    # Connect to SQLite
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+
+    # Fetch completed stationary orders
+    cursor.execute("""
+        SELECT s_order_history.id, s_order_history.user_id, stationary_items.name, 
+               s_order_history.quantity, s_order_history.total_cost, s_order_history.purchase_date 
+        FROM s_order_history 
+        JOIN stationary_items ON s_order_history.product_id = stationary_items.id
+        ORDER BY s_order_history.purchase_date DESC
+    """)
+    
+    orders = cursor.fetchall()
+    conn.close()
+
+    return render_template('admin_stationary_history.html', orders=orders)
+
+
+
+
 
 
 
@@ -86,6 +228,26 @@ def update_status():
         cursor.execute("UPDATE print_orders SET status = ? WHERE id = ?", (new_status, order_id))
         conn.commit()
         conn.close()
+
+@app.route('/update_stationary_order/<int:order_id>/<new_status>', methods=['POST'])
+def update_stationary_order(order_id, new_status):
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+    
+    # Update the order status
+    cursor.execute("UPDATE transactions SET status = ? WHERE id = ?", (new_status, order_id))
+    
+    # If order is completed, move to s_order_history
+    if new_status == 'completed':
+        cursor.execute("INSERT INTO s_order_history SELECT * FROM transactions WHERE id = ?", (order_id,))
+        cursor.execute("DELETE FROM transactions WHERE id = ?", (order_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"success": True})
+
+
 
         
 @app.route('/upload/<filename>')
@@ -104,69 +266,125 @@ def register():
         mut_id = request.form['mut_id']
         email = request.form['email']
         password = request.form['password']
-
-        print(f"MUT ID: {mut_id}, Email: {email}, Password: {password}")
-
-        # Set a default photo if none is uploaded
-        photo_filename = 'default_profile.png'  # Default profile picture
-
-        #if photo and allowed_file(photo.filename):
-        #    # Save the uploaded photo
-        #    photo_filename = f"{mut_id}.png"  # You can customize the filename as needed
-        #    photo.save(os.path.join('static/profile_pics', photo_filename))  # Save to static folder
-
-        try:
-            # Connect with timeout to wait for the lock to release
-            conn = sqlite3.connect('users.db', timeout=10)
-            cursor = conn.cursor()
-            
-            # Insert new user
-            cursor.execute('INSERT INTO users (mut_id, email, password) VALUES (?, ?, ?)', (mut_id, email, password))
-            
-            # Commit the transaction
-            conn.commit()
-            flash('Registration successful! You can now log in.', 'success')
-            return redirect('/login')
-        except sqlite3.IntegrityError:
-            flash('MUT ID or Email already exists.', 'danger')
-            print('MUT ID or Email already exists.')
         
-        except sqlite3.OperationalError as e:
-            flash('Database error: {}'.format(e), 'danger')
-            print(f"Database error: {e}")
+        # Validate MUT ID format
+        if not re.match(r'^MUT\d{2}(AD|CS|CE|ME|EE|EC)\d{3}$', mut_id):
+            flash('Invalid MUT ID format.','danger')
+            return redirect('/register')
 
-        finally:
-            # Close cursor and connection properly
-            cursor.close()
-            conn.close()
+        # Validate email domain
+        if not email.endswith('@mgits.ac.in'):
+            flash('Email must be from the @mgits.ac.in domain.', 'danger')
+            return redirect('/register')
+
+        # Check if the email is not the admin email
+        if email == 'mitsstoremanager@gmail.com':
+            flash('Admin email cannot be used for registration.', 'danger')
+            return redirect('/register')
+
+        otp = str(random.randint(100000, 999999))  # Generate a random 6-digit OTP
+        session['otp'] = otp  # Store OTP in session for verification
+        session['mut_id'] = mut_id  # Store mut_id in session for later use
+        session['email'] = email  # Store email in session for later use
+        session['password'] = password  # Store password in session for later use
+
+        # Send OTP email
+        send_otp(email, otp)
+
+        flash('Registration successful! Please check your email for the OTP.', 'success')
+        return redirect('/verify_otp')  # Redirect to OTP verification page
 
     return render_template('register.html')
 
+def send_otp(to_email, otp):
+    subject = "Your OTP for Email Verification"
+    body = f"""
+    <h1>Email Verification</h1>
+    <p>Your OTP is: <strong>{otp}</strong></p>
+    <p>Please enter this OTP to verify your email address.</p>
+    """
+
+    msg = Message(subject, sender=app.config['MAIL_USERNAME'], recipients=[to_email])
+    msg.html = body
+
+    try:
+        mail.send(msg)
+        print("OTP email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+@app.route('/verify_otp', methods=['GET', 'POST'])
+def verify_otp():
+    if request.method == 'POST':
+        entered_otp = request.form['otp']
+        mut_id = session.get('mut_id')
+        email = session.get('email')
+        password = session.get('password')  # Retrieve password from session
+
+        if entered_otp == session.get('otp'):
+            # OTP is correct, save user to the database
+            try:
+                conn = sqlite3.connect('users.db', timeout=10)
+                cursor = conn.cursor()
+                cursor.execute('INSERT INTO users (mut_id, email, password) VALUES (?, ?, ?)', 
+                               (mut_id, email, password))  # Use password from session
+                conn.commit()
+                flash('Email verified successfully! You can now log in.', 'success')
+                return redirect('/login')
+            except sqlite3.IntegrityError:
+                flash('MUT ID or Email already exists.', 'danger')
+            except sqlite3.OperationalError as e:
+                flash('Database error: {}'.format(e), 'danger')
+            finally:
+                cursor.close()
+                conn.close()
+        else:
+            flash('Invalid OTP. Please try again.', 'danger')
+            return redirect('/verify_otp')  # Redirect to OTP verification page
+
+    return render_template('verify_otp.html')
+
+
+
+@app.route('/delete_order/<int:order_id>', methods=['POST'])
+def delete_order(order_id):
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename FROM print_orders WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    if order:
+        cursor.execute("""
+            INSERT INTO order_history (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, order)
+        conn.commit()
+        cursor.execute("DELETE FROM print_orders WHERE id = ?", (order_id,))
+        conn.commit()
+
+    conn.close()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/order_history')
+def order_history():
+    conn = sqlite3.connect("print_orders.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM order_history ORDER BY deleted_at DESC")
+    orders = cursor.fetchall()
+    conn.close()
+    return render_template("admin.html", orders=orders)
+
+
+
+
+
 @app.route('/home')
 def home():
-    # Assuming you have user ID stored in session after login
-    user_id = session.get('user_id')  # Get the user ID from the session
-
-    if user_id is None:
-        flash('You need to log in first.', 'warning')
-        return redirect('/login')
-
-    # Connect to the database to fetch user information
-    conn = sqlite3.connect("users.db")  # Use your actual database
-    cursor = conn.cursor()
-    
-    # Fetch the user's MUT ID and Email based on the user ID
-    cursor.execute("SELECT mut_id, email FROM users WHERE id = ?", (user_id,))
-    user_info = cursor.fetchone()  # Fetch the user's information
-    conn.close()
-
-    if user_info:
-        mut_id, email = user_info
+    if 'user_id' in session:
+        return render_template('home.html', mut_id=session['mut_id'])
     else:
-        mut_id, email = None, None  # Handle case where user is not found
-
-    # Render the home page with the user's information
-    return render_template("home.html", mut_id=mut_id, email=email)
+        
+        return redirect('/login')
 
 @app.route('/logout')
 def logout():
@@ -177,36 +395,6 @@ def logout():
 @app.route('/about')
 def about():
     return render_template('about.html')
-
-@app.route('/stationary')
-def stationary():
-    # Connect to the database
-    conn = sqlite3.connect('stationary.db')
-    cursor = conn.cursor()
-    
-    # Fetch all stationary items
-    cursor.execute("SELECT id, name, category, price, stock, image_url, description FROM stationary_items")
-    items = cursor.fetchall()
-    
-    # Close connection
-    conn.close()
-    
-    return render_template('stationary.html', items=items)
-
-@app.route('/product/<int:product_id>')
-def product_details(product_id):
-    # Fetch product details from your database
-    conn = sqlite3.connect('stationary.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM stationary_items WHERE id = ?", (product_id,))
-    product = cursor.fetchone()
-    conn.close()
-
-    if product:
-        return render_template('product_details.html', product=product)
-    else:
-        return "Product not found", 404
-
 
 @app.route('/print_orders', methods=['GET', 'POST'])
 def create_print_orders():
@@ -231,7 +419,8 @@ def create_print_orders():
         pdf_reader = PdfReader(pdf_path)
         num_pages = len(pdf_reader.pages)
 
-        cost_per_page = 2 if print_type == 'black_white' else 5
+        # Calculate total cost
+        cost_per_page = 1.5 if print_type == 'black_white' else 5
         total_cost = num_pages * cost_per_page * copies
 
         # Store order details in session
@@ -251,65 +440,15 @@ def create_print_orders():
 
     return render_template('print_orders.html')
 
-
-@app.route('/order_summary')
+@app.route('/order_summary', methods=['GET', 'POST'])
 def order_summary():
-    mut_id = session.get('mut_id')
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT num_pages, copies, total_cost 
-        FROM print_orders 
-        WHERE mut_id=? 
-        ORDER BY id DESC LIMIT 1
-    ''', (mut_id,))
-    order = cursor.fetchone()
-    conn.close()
-
-    if order:
-        num_pages, copies, total_cost = order
-        return render_template('order_summary.html', num_pages=num_pages, copies=copies, total_cost=total_cost)
-    else:
-        flash('No order found.', 'danger')
+    order_details = session.get('order_details')
+    
+    if not order_details:
+        flash('No order details found. Please create an order first.', 'danger')
         return redirect('/print_orders')
 
-@app.route('/delete_order/<int:order_id>', methods=['POST'])
-def delete_order(order_id):
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-
-    #  Retrieve the order details before deleting
-    cursor.execute("SELECT mut_id, copies, layout, print_type, print_sides, expected_datetime FROM print_orders WHERE id = ?", (order_id,))
-    order = cursor.fetchone()
-
-    if order:
-        #  Print query for debugging
-        print("Order found:", order)
-
-        #  Insert into order_history (columns must match exactly)
-        cursor.execute("""
-            INSERT INTO order_history (mut_id, copies, layout, print_type, print_sides, expected_datetime)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, order)
-
-        conn.commit()  # Commit after inserting into history
-
-        #  Now delete only from print_orders
-        cursor.execute("DELETE FROM print_orders WHERE id = ?", (order_id,))
-        conn.commit()  # Commit the deletion
-
-    conn.close()
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/order_history')
-def order_history():
-    conn = sqlite3.connect("print_orders.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM order_history ORDER BY deleted_at DESC")
-    orders = cursor.fetchall()
-    conn.close()
-    return render_template("admin.html", orders=orders)
-
+    return render_template('order_summary.html', **order_details)
 
 
 @app.route('/profile')
@@ -330,9 +469,6 @@ def profile():
 
     return render_template('profile.html', user=user)
 
-
-
-
 @app.route('/remove_profile_photo', methods=['POST'])
 def remove_profile_photo():
     conn = sqlite3.connect('users.db')
@@ -340,7 +476,7 @@ def remove_profile_photo():
     cursor.execute("UPDATE users SET photo = 'default_profile.png' WHERE mut_id = ?", (session['mut_id'],))
     conn.commit()
     conn.close()
-    return redirect(('edit_profile'))
+
 
 
 
@@ -375,38 +511,393 @@ def edit_profile():
     user_id = session['user_id']
 
     # Connect to the database
+    # Fetch user email from the database
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        photo = request.files['photo']
-
-        # Update profile picture if a new one is uploaded
-        if photo and allowed_file(photo.filename):
-            filename = secure_filename(f"{user_id}_{photo.filename}")
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            photo.save(photo_path)
-
-            # Save file path in the database
-            cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
-
-        # Update email and password
-        cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, user_id))
-
-        conn.commit()
-        conn.close()
-
-        flash('Profile updated successfully!', 'success')
-        return redirect('/edit_profile')
-
-    # Fetch current user data
-    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (user_id,))
+    cursor.execute('SELECT email FROM users WHERE mut_id=?', (order_details['mut_id'],))
     user = cursor.fetchone()
     conn.close()
 
-    return render_template('edit_profile.html', user=user)
+    if user:
+        user_email = user[0]
+        # Send order summary email
+        send_order_summary_email(user_email, order_details['num_pages'], order_details['copies'], order_details['total_cost'])
+
+    # Clear the order details from the session
+    session.pop('order_details', None)
+    flash('Order confirmed! A summary has been sent to your email.', 'success')
+    return redirect('/home')
+
+@app.route('/confirm_order', methods=['POST'])
+def confirm_order():
+    order_details = session.get('order_details')
+    
+    if not order_details:
+        flash('No order details found. Please create an order first.', 'danger')
+        return redirect('/print_orders')
+
+    # Save the order to the database
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO print_orders (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, num_pages, total_cost)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (order_details['mut_id'], order_details['copies'], order_details['layout'], 
+          order_details['print_type'], order_details['print_sides'], order_details['expected_datetime'], 
+          order_details['pdf_filename'], order_details['num_pages'], order_details['total_cost']))
+    conn.commit()
+    conn.close()
+
+    # Fetch user email from the database
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT email FROM users WHERE mut_id=?', (order_details['mut_id'],))
+    user = cursor.fetchone()
+    conn.close()
+
+    if user:
+        user_email = user[0]
+        # Send order summary email
+        send_order_summary_email(user_email, order_details['num_pages'], order_details['copies'], order_details['total_cost'])
+
+    # Clear the order details from the session
+    session.pop('order_details', None)
+    flash('Order confirmed! A summary has been sent to your email.', 'success')
+    return redirect('/home')
+
+
+
+def send_order_summary_email(to_email, num_pages, copies, total_cost):
+    subject = "Your Order Summary"
+    body = f"""
+    <h1>Your order is successfully placed!</h1>
+    <h1>Order Summary</h1>
+    <p>Thank you for your order!</p>
+    <p>Number of Pages: {num_pages}</p>
+    <p>Copies: {copies}</p>
+    <p>Total Cost: Rs {total_cost}</p>
+    <p>We appreciate your business!</p>
+    """
+
+    msg = Message(subject, sender=app.config['MAIL_USERNAME'], recipients=[to_email])
+    msg.html = body
+
+    try:
+        mail.send(msg)
+        print("Email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+
+
+
+@app.route('/pay_on_google_pay', methods=['POST'])
+def pay_on_google_pay():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    num_pages = request.form['num_pages']
+    copies = request.form['copies']
+    total_cost = request.form['total_cost']
+    mut_id = session.get('mut_id')
+
+    # Fetch user email from the database
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT email FROM users WHERE mut_id=?', (mut_id,))
+    user = cursor.fetchone()
+    conn.close()
+
+    if user:
+        user_email = user[0]
+        send_order_summary_email(user_email, num_pages, copies, total_cost)
+
+    flash('Payment initiated! A summary has been sent to your email.', 'success')
+    return redirect('/home')
+
+@app.route('/cancel_order')
+def cancel_order():
+    # Set a flash message indicating the order has been canceled
+    flash('Your order is cancelled.', 'info')
+    return redirect(url_for('home'))
+
+
+
+
+@app.route('/stationary')
+def stationary():
+    # Connect to the database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+    
+    # Fetch all stationary items
+    cursor.execute('''SELECT id, name, category, price, stock, image_url, description, rating FROM stationary_items
+                   order by rating DESC''')
+    items = cursor.fetchall()
+    
+    # Close connection
+    conn.close()
+    
+    return render_template('stationary.html', items=items)
+
+@app.route('/product/<int:product_id>')
+def product_details(product_id):
+    # Fetch product details from your database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM stationary_items WHERE id = ?", (product_id,))
+    product = cursor.fetchone()
+    conn.close()
+
+    if product:
+        return render_template('product_details.html', product=product)
+    else:
+        return "Product not found", 404
+
+@app.route('/submit_rating/<int:product_id>', methods=['POST'])
+def submit_rating(product_id):
+    user_rating = int(request.form['user_rating'])  # Get user's rating from form
+
+    # Connect to database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor() 
+
+    # Fetch current rating from the database
+    cursor.execute("SELECT rating FROM stationary_items WHERE id = ?", (product_id,))
+    result = cursor.fetchone()
+
+    if result:
+        old_rating = result[0]  # Get the current rating from DB
+        new_rating = ceil((old_rating + user_rating) / 2)  # Compute new rating using ceil
+
+        # Update the database
+        cursor.execute("UPDATE stationary_items SET rating = ? WHERE id = ?", 
+                       (new_rating, product_id))
+        conn.commit()
+
+    conn.close()
+    return redirect(url_for('product_details', product_id=product_id))  # Redirect back to product page
+
+@app.route('/add_to_cart/<int:product_id>', methods=['POST'])
+def add_to_cart(product_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    quantity = int(request.form.get("quantity", 1))  # Get quantity from form, default to 1
+
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    # Check if the product is already in the cart
+    cursor.execute("SELECT quantity FROM cart WHERE user_id = ? AND product_id = ?", (user_id, product_id))
+    existing_item = cursor.fetchone()
+
+    if existing_item:
+        # If the item exists, update the quantity
+        new_quantity = existing_item[0] + quantity
+        cursor.execute("UPDATE cart SET quantity = ? WHERE user_id = ? AND product_id = ?", 
+                       (new_quantity, user_id, product_id))
+    else:
+        # If the item does not exist, insert it
+        cursor.execute("INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, ?)", 
+                       (user_id, product_id, quantity))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('cart_page'))
+
+@app.route('/cart')
+def cart_page():
+    
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT s.id, s.name, s.price, c.quantity 
+        FROM cart c 
+        JOIN stationary_items s ON c.product_id = s.id 
+        WHERE c.user_id = ?
+    """, (user_id,))
+
+    cart_items = cursor.fetchall()
+    # Calculate the total cost
+    
+    total_cost = sum(item[2] * item[3] for item in cart_items) if cart_items else 0    
+    print("Cart Items:", cart_items)  # Debugging Output
+    print("Total Cost:", total_cost)  # Debugging Output
+
+    conn.close()
+
+    return render_template("cart.html", cart_items=cart_items,total_cost=total_cost)
+
+
+
+@app.route('/update_cart/<int:product_id>', methods=['POST'])
+def update_cart(product_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    new_quantity = int(request.form.get('quantity'))
+
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    cursor.execute("UPDATE cart SET quantity = ? WHERE user_id = ? AND product_id = ?", (new_quantity, user_id, product_id))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('cart_page'))
+
+@app.route('/remove_from_cart/<int:product_id>', methods=['POST'])
+def remove_from_cart(product_id):
+    # Connect to database
+    conn = sqlite3.connect('stationary.db')
+    cursor = conn.cursor()
+
+    # Remove the item from the cart table
+    cursor.execute("DELETE FROM cart WHERE product_id = ?", (product_id,))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('cart_page'))  # Redirect back to cart page
+
+
+@app.route('/buy', methods=['POST'])
+def buy_items():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    # Buying from cart
+    if 'from_cart' in request.form:
+        cursor.execute("SELECT product_id, quantity FROM cart WHERE user_id = ?", (user_id,))
+        cart_items = cursor.fetchall()
+
+        if not cart_items:
+            conn.close()
+            return redirect(url_for('cart_page'))
+
+        for product_id, quantity in cart_items:
+            cursor.execute("SELECT price FROM stationary_items WHERE id = ?", (product_id,))
+            price = cursor.fetchone()[0]
+            total_cost = price * quantity
+
+            cursor.execute("""
+                INSERT INTO transactions (user_id, product_id, quantity, total_cost)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, product_id, quantity, total_cost))
+
+        # Clear cart after purchase
+        cursor.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
+
+    # Buying from product details page
+    else:
+        product_id = request.form.get('product_id')
+        quantity = int(request.form.get('quantity'))
+
+        cursor.execute("SELECT price FROM stationary_items WHERE id = ?", (product_id,))
+        price = cursor.fetchone()[0]
+        total_cost = price * quantity
+
+        cursor.execute("""
+            INSERT INTO transactions (user_id, product_id, quantity, total_cost)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, product_id, quantity, total_cost))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('s_orders'))
+
+@app.route('/s_orders')
+def s_orders():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT t.id, s.name, t.quantity, t.total_cost, t.status, t.purchase_date
+        FROM transactions t
+        JOIN stationary_items s ON t.product_id = s.id
+        WHERE t.user_id = ?
+        ORDER BY t.purchase_date DESC
+    """, (user_id,))
+
+    orders = cursor.fetchall()
+    conn.close()
+
+    return render_template("s_orders.html", orders=orders)
+
+@app.route('/buy_cart_items', methods=['POST'])
+def buy_cart_items():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    # Fetch cart items with product price
+    cursor.execute("SELECT c.product_id, c.quantity, s.price FROM cart c JOIN stationary_items s ON c.product_id = s.id WHERE c.user_id = ?", (user_id,))
+    cart_items = cursor.fetchall()
+
+    if not cart_items:
+        conn.close()
+        return redirect(url_for('cart_page'))  # No items in cart, redirect back
+
+    # Insert cart items into transactions table with total cost
+    for item in cart_items:
+        product_id, quantity, price = item
+        total_cost = price * quantity  # Calculate total cost
+        cursor.execute("INSERT INTO transactions (user_id, product_id, quantity, total_cost) VALUES (?, ?, ?, ?)",
+                       (user_id, product_id, quantity, total_cost))
+
+    # Clear cart after purchase
+    cursor.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for('s_orders'))  # Redirect to orders page
+
+def move_order_to_history(order_id):
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    # Get order details
+    cursor.execute("SELECT * FROM transactions WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+
+    if order:
+        # Insert into history
+        cursor.execute("""
+            INSERT INTO s_order_history (user_id, product_id, quantity, total_cost, status, purchase_date)
+            VALUES (?, ?, ?, ?, 'completed', ?)
+        """, (order[1], order[2], order[3], order[4], order[6]))
+
+        # Delete from transactions
+        cursor.execute("DELETE FROM transactions WHERE id = ?", (order_id,))
+    
+    conn.commit()
+    conn.close()
+
+
+
+
 
 
 if __name__ == '__main__':

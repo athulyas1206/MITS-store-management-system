@@ -144,6 +144,19 @@
         </div>
     </div>
 
+    <!-- Flash Message Display -->
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert alert-info">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+
     <!-- Main Content Sections -->
     <div class="container">
         <div class="row content-section">
