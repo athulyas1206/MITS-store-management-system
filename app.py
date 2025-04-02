@@ -12,8 +12,8 @@ app.secret_key = 'your_secret_key'  # Required for session management
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-UPLOAD_FOLDER = 'static/profile_pics'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+#UPLOAD_FOLDER = 'static/profile_pics'
+#ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -92,12 +92,28 @@ def update_status():
 def upload(filename):
     return f"File {filename} uploaded successfully!"
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+#os.makedirs('static/profile_pics', exist_ok=True)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
+        print("Form submitted")
         mut_id = request.form['mut_id']
         email = request.form['email']
         password = request.form['password']
+
+        print(f"MUT ID: {mut_id}, Email: {email}, Password: {password}")
+
+        # Set a default photo if none is uploaded
+        photo_filename = 'default_profile.png'  # Default profile picture
+
+        #if photo and allowed_file(photo.filename):
+        #    # Save the uploaded photo
+        #    photo_filename = f"{mut_id}.png"  # You can customize the filename as needed
+        #    photo.save(os.path.join('static/profile_pics', photo_filename))  # Save to static folder
 
         try:
             # Connect with timeout to wait for the lock to release
@@ -113,10 +129,12 @@ def register():
             return redirect('/login')
         except sqlite3.IntegrityError:
             flash('MUT ID or Email already exists.', 'danger')
+            print('MUT ID or Email already exists.')
         
         except sqlite3.OperationalError as e:
             flash('Database error: {}'.format(e), 'danger')
-        
+            print(f"Database error: {e}")
+
         finally:
             # Close cursor and connection properly
             cursor.close()
@@ -126,11 +144,29 @@ def register():
 
 @app.route('/home')
 def home():
-    if 'user_id' in session:
-        return render_template('home.html', mut_id=session['mut_id'])
-    else:
-        flash('Please log in first.', 'warning')
+    # Assuming you have user ID stored in session after login
+    user_id = session.get('user_id')  # Get the user ID from the session
+
+    if user_id is None:
+        flash('You need to log in first.', 'warning')
         return redirect('/login')
+
+    # Connect to the database to fetch user information
+    conn = sqlite3.connect("users.db")  # Use your actual database
+    cursor = conn.cursor()
+    
+    # Fetch the user's MUT ID and Email based on the user ID
+    cursor.execute("SELECT mut_id, email FROM users WHERE id = ?", (user_id,))
+    user_info = cursor.fetchone()  # Fetch the user's information
+    conn.close()
+
+    if user_info:
+        mut_id, email = user_info
+    else:
+        mut_id, email = None, None  # Handle case where user is not found
+
+    # Render the home page with the user's information
+    return render_template("home.html", mut_id=mut_id, email=email)
 
 @app.route('/logout')
 def logout():
@@ -175,7 +211,6 @@ def product_details(product_id):
 @app.route('/print_orders', methods=['GET', 'POST'])
 def create_print_orders():
     if request.method == 'POST':
-        # Get form data
         mut_id = session.get('mut_id')
         copies = int(request.form['copies'])
         layout = request.form['layout']
@@ -184,37 +219,35 @@ def create_print_orders():
         expected_datetime = request.form['expected_datetime']
         pdf = request.files['pdf_upload']
 
-        # Check if the expected datetime is in the future
         expected_dt = datetime.strptime(expected_datetime, '%Y-%m-%dT%H:%M')
         if expected_dt <= datetime.now():
             flash('Expected date and time must be in the future.', 'danger')
             return redirect('/print_orders')
 
-        # Save the uploaded PDF file
         pdf_filename = f"{mut_id}_{pdf.filename}"
         pdf_path = os.path.join(UPLOAD_FOLDER, pdf_filename)
         pdf.save(pdf_path)
 
-        # Extract the number of pages using PyPDF2
         pdf_reader = PdfReader(pdf_path)
         num_pages = len(pdf_reader.pages)
 
-        # Calculate total cost
         cost_per_page = 2 if print_type == 'black_white' else 5
         total_cost = num_pages * cost_per_page * copies
 
-        # Insert order details into database
-        conn = sqlite3.connect('print_orders.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO print_orders (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, num_pages, total_cost)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (mut_id, copies, layout, print_type, print_sides, expected_datetime, pdf_filename, num_pages, total_cost))
-        conn.commit()
-        conn.close()
+        # Store order details in session
+        session['order_details'] = {
+            'mut_id': mut_id,
+            'copies': copies,
+            'layout': layout,
+            'print_type': print_type,
+            'print_sides': print_sides,
+            'expected_datetime': expected_datetime,
+            'pdf_filename': pdf_filename,
+            'num_pages': num_pages,
+            'total_cost': total_cost
+        }
 
-        flash('Order saved successfully! Proceed to payment.', 'success')
-        return redirect('/order_summary')
+        return redirect('/order_summary')  # Redirect to order summary page
 
     return render_template('print_orders.html')
 
@@ -287,7 +320,7 @@ def profile():
 
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (session['user_id'],))
+    cursor.execute("SELECT * FROM users WHERE id=?", (session['user_id'],))
     user = cursor.fetchone()
     conn.close()
 

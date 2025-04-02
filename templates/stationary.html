@@ -6,30 +6,116 @@
     <title>Stationary Items</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='stationary.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #F8F9FA;
+        }
+
+        /* Heading with Back Button */
+        .header {
+            background: #004080;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            margin: 0;
+            flex-grow: 1;
+            text-align: center;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Navigation Bar for Categories */
+        .navbar {
+            background: #004080;
+        }
+
+        .navbar-nav .nav-link {
+            color: white;
+            transition: color 0.3s;
+        }
+
+        .navbar-nav .nav-link:hover {
+            color: #FACC15; /* Change color on hover */
+        }
+
+        /* Search Bar */
+        #searchBox {
+            transition: box-shadow 0.3s;
+        }
+
+        #searchBox:focus {
+            box-shadow: 0 0 5px rgba(30, 58, 138, 0.5);
+            outline: none;
+        }
+
+        /* Items Container */
+        .item-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 12px;  /* Improved rounded corners */
+            overflow: hidden;     /* Prevents image overflow */
+            padding: 10px; /* Increased card size */
+        }
+
+        .item-card img {
+            height: 150px;         /* Ensures consistent image size */
+            width: 100%;           /* Full width for image */
+            object-fit: contain;   /* Ensures images scale properly */
+            background-color: #f8f9fa; /* Subtle background to improve look */
+        }
+
+        .item-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-body {
+            padding: 10px;
+        }
+
+        .rating {
+            cursor: pointer;
+            font-size: 20px;
+            color: #FFD700; /* Gold color for stars */
+        }
+
+        .rating:hover {
+            color: #FFC107; /* Lighter gold on hover */
+        }
+    </style>
 </head>
 <body class="bg-light">
     
-     <!-- Heading with Back Button -->
-     <div class="bg-primary text-white p-3 d-flex align-items-center justify-content-between">
+    <!-- Heading with Back Button -->
+    <div class="header">
         <a href="{{ url_for('home') }}" class="btn btn-warning">Back to Home</a>
-        <h1 class="m-0 text-center flex-grow-1">Stationary Items</h1>
+        <h1 class="m-0">Stationary Items</h1>
     </div>
 
-   
-        <!-- Navigation Bar for Categories -->
-        <nav class="navbar navbar-expand-lg bg-primary">
-            <div class="container-fluid justify-content-center">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link text-white" href="#">Pens</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="#">Notebooks</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="#">Art Supplies</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="#">Files & Folders</a></li>
-                    <!-- Add more categories as needed -->
-                </ul>
-            </div>
-        </nav>
-        <div class="container mt-4">
+    <!-- Navigation Bar for Categories -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid justify-content-center">
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="#">Pens</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Notebooks</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Art Supplies</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Files & Folders</a></li>
+                <!-- Add more categories as needed -->
+            </ul>
+        </div>
+    </nav>
 
+    <div class="container mt-4">
         <!-- Centered Search Bar -->
         <div class="d-flex justify-content-center mb-4">
             <input 
@@ -94,38 +180,6 @@
             }
             ratingDiv.innerHTML = stars;
         }
-
     </script>
-
-        <style>
-            .item-card {
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-                border-radius: 12px;  /* Improved rounded corners */
-                overflow: hidden;     /* Prevents image overflow */
-                padding: 10px; /* Increased card size */
-            }
-            .item-card img {
-                height: 150px;         /* Ensures consistent image size */
-                width: 100%;           /* Full width for image */
-                object-fit: contain;   /* Ensures images scale properly */
-                background-color: #f8f9fa; /* Subtle background to improve look */
-                padding: 0px;         /* Adds space around the image */
-            }
-            .card-img-top {
-            height: 180px; /* Increased image size */
-            object-fit: contain; /* Ensures full image visibility */
-            padding: 10px; /* Adds space around the image */
-        }
-            
-            .item-card:hover {
-                transform: scale(1.05);
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            }
-            .card-body {
-                padding: 10px;
-            }
-        </style>
-
-
 </body>
 </html>
