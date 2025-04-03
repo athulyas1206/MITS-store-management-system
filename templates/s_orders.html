@@ -9,26 +9,61 @@
         .orders-container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1); }
         .order-item { border-bottom: 1px solid #ddd; padding: 10px 0; }
         .order-item:last-child { border-bottom: none; }
-        .status { font-weight: bold; color: green; }
+        .status { font-weight: bold; }
+        .status.pending { color: orange; }
+        .status.completed { color: green; }
+        /* Back Button */
+        .back-button {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .back-button:hover {
+            background: #0056b3;
+        }
     </style>
 </head>
 <body>
 
     <div class="orders-container">
+        <!-- Back Button -->
+        <a href="{{ url_for('stationary') }}" class="back-button">← Back</a>
         <h2>My Orders</h2>
 
-        {% if orders %}
-            {% for order in orders %}
+        <!-- Ongoing Orders Section -->
+        <h3>Ongoing Orders</h3>
+        {% if ongoing_orders %}
+            {% for order in ongoing_orders %}
                 <div class="order-item">
                     <p><strong>{{ order[1] }}</strong></p>
                     <p>Quantity: {{ order[2] }}</p>
                     <p>Total Cost: ₹{{ order[3] }}</p>
-                    <p>Status: <span class="status">{{ order[4] }}</span></p>
+                    <p>Status: <span class="status pending">{{ order[4] }}</span></p>
                     <p>Ordered on: {{ order[5] }}</p>
                 </div>
             {% endfor %}
         {% else %}
-            <p>No orders found.</p>
+            <p>No ongoing orders.</p>
+        {% endif %}
+
+        <!-- Completed Orders Section -->
+        <h3>Completed Orders</h3>
+        {% if completed_orders %}
+            {% for order in completed_orders %}
+                <div class="order-item">
+                    <p><strong>{{ order[1] }}</strong></p>
+                    <p>Quantity: {{ order[2] }}</p>
+                    <p>Total Cost: ₹{{ order[3] }}</p>
+                    <p>Status: <span class="status completed">{{ order[4] }}</span></p>
+                    <p>Ordered on: {{ order[5] }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No completed orders.</p>
         {% endif %}
     </div>
 

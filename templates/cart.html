@@ -75,12 +75,27 @@
             border-radius: 5px;
             margin-top: 15px;
         }
+        /* Back Button */
+        .back-button {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .back-button:hover {
+            background: #0056b3;
+        }
     </style>
 </head>
 
 <body>
 
     <div class="cart-container">
+        <!-- Back Button -->
+        <a href="{{ url_for('stationary') }}" class="back-button">← Back</a>
         <h2>Your Cart</h2>
 
         {% if cart_items %}
