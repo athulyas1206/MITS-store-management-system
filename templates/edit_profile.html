@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Edit Profile</h2>
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Edit Profile</h2>
     
     <!-- Profile Picture Section -->
-    <div class="text-center mb-3">
+    <div class="text-center mb-4">
         <img src="{{ url_for('static', filename='profile_pics/' + (user['photo'] if user['photo'] else 'default_profile.png')) }}" 
              alt="Profile Picture" class="img-fluid rounded-circle" width="200" height="200"><br>
 
@@ -16,25 +16,30 @@
         </form>
 
         <!-- Remove Profile Photo -->
-        {% if user[1] %}
-        <form method="POST" action="/remove_photo">
-            <button type="submit" class="btn btn-danger mt-2">Remove Photo</button>
+        {% if user['photo'] %}
+        <form method="POST" action="/remove_photo" class="mt-2">
+            <button type="submit" class="btn btn-danger">Remove Photo</button>
         </form>
         {% endif %}
     </div>
 
-    <!-- Edit Email & Password -->
-    <form method="POST">
+    <!-- User Information Section -->
+    <form method="POST" class="mb-4">
         <div class="mb-3">
             <label for="email" class="form-label">Email:</label>
-            <input type="email" name="email" class="form-control" value="{{ user[1] }}" required>
+            <input type="email" name="email" class="form-control" value="{{ user['email'] }}" required>
         </div>
 
-        <!-- Old Password (Hidden by Default) -->
+        <div class="mb-3">
+            <label for="bio" class="form-label">Bio:</label>
+            <textarea name="bio" class="form-control" rows="3" placeholder="Tell us about yourself...">{{ user['bio'] }}</textarea>
+        </div>
+
+        <!-- Old Password -->
         <div class="mb-3">
             <label class="form-label">Old Password:</label>
             <div class="input-group">
-                <input type="password" id="old_password" class="form-control" value="{{ user[0] }}" disabled>
+                <input type="password" id="old_password" class="form-control" required>
                 <button type="button" class="btn btn-secondary" onclick="toggleOldPassword()">👁 Show</button>
             </div>
         </div>
@@ -51,17 +56,18 @@
         <button type="submit" class="btn btn-success">Save Changes</button>
         <a href="/profile" class="btn btn-secondary">Cancel</a>
     </form>
+
+    <!-- Profile Completion Status -->
+    <div class="progress mt-4">
+        <div class="progress-bar" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">Profile Completion: 75%</div>
+    </div>
 </div>
 
 <!-- JavaScript for Show/Hide Passwords -->
 <script>
     function toggleOldPassword() {
         var oldPasswordField = document.getElementById("old_password");
-        if (oldPasswordField.type === "password") {
-            oldPasswordField.type = "text";
-        } else {
-            oldPasswordField.type = "password";
-        }
+        oldPasswordField.type = oldPasswordField.type === "password" ? "text" : "password";
     }
 
     function toggleNewPassword() {
@@ -69,5 +75,20 @@
         newPasswordField.type = newPasswordField.type === "password" ? "text" : "password";
     }
 </script>
+
+<style>
+    .container {
+        max-width: 600px;
+    }
+    .text-center {
+        margin-bottom: 20px;
+    }
+    .form-label {
+        font-weight: bold;
+    }
+    .progress {
+        height: 20px;
+    }
+</style>
 
 {% endblock %}

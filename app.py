@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from PyPDF2 import PdfReader
 from math import ceil
-
+from recommendation import get_recommendations
 from flask_mail import Mail, Message
 import random
 import re  # Import regex for validation
@@ -25,9 +25,6 @@ mail = Mail(app)
 
 UPLOAD_FOLDER = 'static/profile_pics'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-# Ensure the upload folder exists
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -247,9 +244,15 @@ def update_stationary_order(order_id, new_status):
 def upload(filename):
     return f"File {filename} uploaded successfully!"
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+#os.makedirs('static/profile_pics', exist_ok=True)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
+        print("Form submitted")
         mut_id = request.form['mut_id']
         email = request.form['email']
         password = request.form['password']
@@ -432,6 +435,100 @@ def order_summary():
 
     return render_template('order_summary.html', **order_details)
 
+
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE id=?", (session['user_id'],))
+    user = cursor.fetchone()
+    conn.close()
+
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect('/login')
+
+    return render_template('profile.html', user=user)
+
+@app.route('/remove_profile_photo', methods=['POST'])
+def remove_profile_photo():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET photo = 'default_profile.png' WHERE mut_id = ?", (session['mut_id'],))
+    conn.commit()
+    conn.close()
+
+
+
+
+@app.route('/orders')
+def orders():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Fetch Print Orders
+    cursor.execute("SELECT id, expected_datetime, status FROM print_orders WHERE mut_id=?", (session['mut_id'],))
+    print_orders = cursor.fetchall()
+
+    # Fetch Stationary Orders (to be implemented later)
+    cursor.execute("SELECT id, expected_datetime, status FROM stationary_orders WHERE mut_id=?", (session['mut_id'],))
+    stationary_orders = cursor.fetchall()
+
+    conn.close()
+
+    return render_template('orders.html', print_orders=print_orders, stationary_orders=stationary_orders)
+
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+def edit_profile():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    user_id = session['user_id']
+
+    # Connect to the database
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        photo = request.files['photo']
+
+        # Update profile picture if a new one is uploaded
+        if photo and allowed_file(photo.filename):
+            filename = secure_filename(f"{user_id}_{photo.filename}")
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            photo.save(photo_path)
+
+            # Save file path in the database
+            cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
+
+        # Update email and password
+        cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, user_id))
+
+        conn.commit()
+        conn.close()
+
+        flash('Profile updated successfully!', 'success')
+        return redirect('/edit_profile')
+
+    # Fetch current user data
+    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+
+    return render_template('edit_profile.html', user=user)
+
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
     order_details = session.get('order_details')
@@ -572,19 +669,49 @@ def cancel_order():
 
 @app.route('/stationary')
 def stationary():
-    # Connect to the database
     conn = sqlite3.connect('stationary.db')
     cursor = conn.cursor()
-    
-    # Fetch all stationary items
-    cursor.execute('''SELECT id, name, category, price, stock, image_url, description, rating FROM stationary_items
-                   order by rating DESC''')
+
+    user_id = session.get("user_id")
+
+    # Fetch all stationary items sorted by rating
+    cursor.execute('''
+        SELECT id, name, category, price, stock, image_url, description, rating 
+        FROM stationary_items 
+        ORDER BY rating DESC
+    ''')
     items = cursor.fetchall()
-    
-    # Close connection
+
+    # Fetch recommended items using AI-based recommendations
+    recommended_items = []
+    if user_id:
+        recommended_product_ids = get_recommendations(user_id, top_n=5)
+        
+        print("Recommended Product IDs:", recommended_product_ids)  # Debugging line ✅
+
+        if recommended_product_ids:
+            query = f'''
+                SELECT id, name, category, price, stock, image_url, description, rating
+                FROM stationary_items
+                WHERE id IN ({",".join("?" * len(recommended_product_ids))})
+            '''
+            cursor.execute(query, recommended_product_ids)
+            recommended_items = cursor.fetchall()
+            print("Fetched Recommended Items:", recommended_items)  # Debugging line ✅
+
+    # Fallback: If no personalized recommendations, show trending items
+    if not recommended_items:
+        cursor.execute('''
+            SELECT id, name, category, price, stock, image_url, description, rating
+            FROM stationary_items
+            ORDER BY rating DESC
+            LIMIT 5
+        ''')
+        recommended_items = cursor.fetchall()
+
     conn.close()
-    
-    return render_template('stationary.html', items=items)
+    return render_template('stationary.html', items=items, recommended_items=recommended_items)
+
 
 @app.route('/product/<int:product_id>')
 def product_details(product_id):
