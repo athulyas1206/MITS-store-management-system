@@ -1,0 +1,18 @@
+<!-- templates/orders.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Current Orders</title>
+</head>
+<body>
+    <h1>Current Print Orders</h1>
+    <ul>
+        {% for order in ordersx %}
+            <li>Order ID: {{ order.order_id }}, Copies: {{ order.num_copies }}, Expected Time: {{ order.expected_time }} minutes</li>
+        {% endfor %}
+    </ul>
+    <a href="/">Place Another Order</a>
+</body>
+</html>

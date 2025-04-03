@@ -914,7 +914,34 @@ def move_order_to_history(order_id):
     conn.close()
 
 
+ordersx = []
 
+class PrintOrder:
+    def __init__(self, order_id, num_copies, expected_time):
+        self.order_id = order_id
+        self.num_copies = num_copies
+        self.expected_time = expected_time
+
+    def __repr__(self):
+        return f"Order({self.order_id}, Copies: {self.num_copies}, Time: {self.expected_time})"
+    
+@app.route('/place_order', methods=['POST'])
+
+def place_order():
+    order_id = len(ordersx) + 1  # Simple ID generation
+    num_copies = int(request.form['num_copies'])
+    expected_time = int(request.form['expected_time'])
+    
+    new_order = PrintOrder(order_id, num_copies, expected_time)
+    ordersx.append(new_order)
+    
+    return redirect(url_for('view_orders'))
+
+@app.route('/ordersx')
+def view_orders():
+    # Sort orders by number of copies (descending) and then by expected time (ascending)
+    sorted_orders = sorted(ordersx, key=lambda order: (-order.num_copies, order.expected_time))
+    return render_template('ordersx.html', ordersx=sorted_orders)
 
 
 
