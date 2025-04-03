@@ -436,55 +436,16 @@ def order_summary():
     return render_template('order_summary.html', **order_details)
 
 
-@app.route('/profile')
-def profile():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
-
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE id=?", (session['user_id'],))
-    user = cursor.fetchone()
-    conn.close()
-
-    if not user:
-        flash('User not found.', 'danger')
-        return redirect('/login')
-
-    return render_template('profile.html', user=user)
-
-@app.route('/remove_profile_photo', methods=['POST'])
-def remove_profile_photo():
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET photo = 'default_profile.png' WHERE mut_id = ?", (session['mut_id'],))
-    conn.commit()
-    conn.close()
 
 
 
 
-@app.route('/orders')
-def orders():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
 
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
 
-    # Fetch Print Orders
-    cursor.execute("SELECT id, expected_datetime, status FROM print_orders WHERE mut_id=?", (session['mut_id'],))
-    print_orders = cursor.fetchall()
 
-    # Fetch Stationary Orders (to be implemented later)
-    cursor.execute("SELECT id, expected_datetime, status FROM stationary_orders WHERE mut_id=?", (session['mut_id'],))
-    stationary_orders = cursor.fetchall()
 
-    conn.close()
 
-    return render_template('orders.html', print_orders=print_orders, stationary_orders=stationary_orders)
+
 
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
