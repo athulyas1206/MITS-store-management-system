@@ -463,16 +463,15 @@ def edit_profile():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        photo = request.files['photo']
 
-        # Update profile picture if a new one is uploaded
-        if photo and allowed_file(photo.filename):
-            filename = secure_filename(f"{user_id}_{photo.filename}")
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            photo.save(photo_path)
+        # # Update profile picture if a new one is uploaded
+        # if photo and allowed_file(photo.filename):
+        #     filename = secure_filename(f"{user_id}_{photo.filename}")
+        #     photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        #     photo.save(photo_path)
 
             # Save file path in the database
-            cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
+            #cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
 
         # Update email and password
         cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, user_id))

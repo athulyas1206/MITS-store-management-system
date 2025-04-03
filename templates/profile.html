@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container mt-5">
     <h2 class="text-center mb-4">User  Profile</h2>
-    <div class="card shadow-lg">
+    <div class="card shadow-lg mb-4">
         <div class="card-body text-center">
             <div class="profile-header">
                 <h4 class="mt-3">Hello Buddy!</h4> <!-- Greeting -->
@@ -11,13 +11,6 @@
                 <p class="text-muted">MUT ID: <strong>{{ mut_id }}</strong></p> <!-- Displaying MUT ID -->
                 <p class="text-muted">Email: <strong>{{ email }}</strong></p> <!-- Displaying Email -->
             </div>
-            <!--<hr>
-            <div class="bio-section mt-4">
-                <!--<h5>About Me</h5>
-                <!--<p class="text-muted">This is a short bio about you. Feel free to share your interests, hobbies, or anything that makes you unique!</p>
-                <!--<p class="text-muted"><strong>Your Bio:</strong> {{ user_bio }}</p> <!-- Placeholder for user bio --> 
-            <!--</div>
-            <!--<hr>-->
             <div class="progress mt-4">
                 <div class="progress-bar" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">Profile Completion: 75%</div>
             </div>
@@ -25,92 +18,83 @@
             <div class="button-group mt-4">
                 <a href="/" class="btn btn-primary btn-lg">🏠 Home</a>
                 <a href="/edit_profile" class="btn btn-warning btn-lg">✏️ Edit Profile</a>
-                <a href="/orders" class="btn btn-info btn-lg">📦 My Orders</a>
-                <!-- <a href="/favorites" class="btn btn-success btn-lg">⭐ Favorites</a> -->
-                <a href="/notifications" class="btn btn-secondary btn-lg">🔔 Notifications</a>
-                <a href="/settings" class="btn btn-light btn-lg">⚙️ Settings</a>
+                <a href="/notifications" class="btn btn-secondary btn-lg">📦 My Print Orders</a>
+                <a href="/notifications" class="btn btn-secondary btn-lg">📦 My Stationery Orders</a>
                 <a href="/logout" class="btn btn-danger btn-lg">🚪 Logout</a>
             </div>
         </div>
     </div>
 
-    <div class="card mt-4 shadow-lg">
-        <div class="card-body">
-            <h5 class="text-center">Order History</h5>
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Order ID</th>
-                        <th>Order Date</th>
-                        <th>Status</th>
-                        <th>Total Cost</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for order in orders %}
-                    <tr>
-                        <td>{{ order[0] }}</td>
-                        <td>{{ order[1] }}</td>
-                        <td>{{ order[2] }}</td>
-                        <td>${{ order[3] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <!-- Find the Man Game Feature Section -->
+<div class="card mt-4 shadow-lg">
+    <div class="card-body text-center">
+        <h5 class="text-center">👤 Find the Man Game!</h5>
+        <p class="text-muted">Click on the man as fast as you can!</p>
+        <div id="gameArea" style="position: relative; width: 100%; height: 400px; border: 2px dashed #007bff; overflow: hidden;">
+            <span id="man" style="font-size: 50px; position: absolute; display: none;">👤</span>
         </div>
-    </div>
-
-    <div class="card mt-4 shadow-lg">
-        <div class="card-body">
-            <h5 class="text-center">Recent Activity</h5>
-            <ul class="list-group">
-                <li class="list-group-item">Updated profile information on {{ current_date }}</li>
-                <li class="list-group-item">Placed an order on {{ last_order_date }}</li>
-                <li class="list-group-item">Added a new favorite item on {{ favorite_item_date }}</li>
-            </ul>
-        </div>
-    </div>
-
-    <!--<div class="card mt-4 shadow-lg">
-        <div class="card-body">
-            <h5 class="text-center">Favorite Items</h5>
-            <ul class="list-group">
-                {% for item in favorite_items %}
-                <li class="list-group-item">{{ item.name }} - ${{ item.price }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div> -->
-
-    <div class="card mt-4 shadow-lg">
-        <div class="card-body">
-            <h5 class="text-center">Notifications</h5>
-            <ul class="list-group">
-                {% for notification in notifications %}
-                <li class="list-group-item">{{ notification.message }}</li>
-                {% endfor %}
-            </ul>
-        </div>
+        <p class="mt-3">Your Score: <strong id="score">0</strong></p>
+        <button class="btn btn-success mt-3" onclick="startGame()">Start Game</button>
     </div>
 </div>
 
 <style>
-    .profile-header {
-        margin-bottom: 20px;
+    .card {
+        border-radius: 10px; /* Rounded corners for cards */
     }
-    .bio-section {
-        margin: 20px 0;
+    .card-body {
+        padding: 2rem; /* Increased padding for better spacing */
     }
-    .button-group a {
-        margin: 5px;
+    h5 {
+        font-weight: 600; /* Bold headings */
     }
-    .progress {
-        height: 20px;
-    }
-    .list-group-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    .text-muted {
+        margin: 0.5rem 0; /* Spacing for text */
     }
 </style>
+
+<script>
+    let score = 0;
+    let manVisible = false;
+    let gameInterval;
+
+    function startGame() {
+        score = 0;
+        document.getElementById('score').innerText = score;
+        manVisible = true;
+        moveMan();
+        gameInterval = setInterval(moveMan, 1000); // Move the man every second
+    }
+
+    function moveMan() {
+        const man = document.getElementById('man');
+        const gameArea = document.getElementById('gameArea');
+
+        // Hide the man if it's currently visible
+        if (manVisible) {
+            man.style.display = 'none';
+        }
+
+        // Generate random positions within the game area
+        const x = Math.random() * (gameArea.clientWidth - 50); // 50 is the width of the emoji
+        const y = Math.random() * (gameArea.clientHeight - 50); // 50 is the height of the emoji
+
+        // Set the new position of the man
+        man.style.left = `${x}px`;
+        man.style.top = `${y}px`;
+        man.style.display = 'block';
+
+        // Show the man
+        manVisible = true;
+    }
+
+    // Function to handle clicking on the man
+    document.getElementById('man').onclick = function() {
+        if (manVisible) {
+            score++;
+            document.getElementById('score').innerText = score;
+            moveMan(); // Move the man again after a successful click
+        }
+    };
+</script>
 {% endblock %}
