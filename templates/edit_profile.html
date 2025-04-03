@@ -6,21 +6,8 @@
     
     <!-- Profile Picture Section -->
     <div class="text-center mb-4">
-        <img src="{{ url_for('static', filename='profile_pics/' + (user['photo'] if user['photo'] else 'default_profile.png')) }}" 
+        <img src="https://img.freepik.com/free-psd/3d-rendering-hair-style-avatar-design_23-2151869159.jpg" 
              alt="Profile Picture" class="img-fluid rounded-circle" width="200" height="200"><br>
-
-        <!-- Upload New Photo -->
-        <form method="POST" enctype="multipart/form-data" class="mt-2">
-            <input type="file" name="photo" class="form-control mt-2">
-            <button type="submit" class="btn btn-primary mt-2">Update Photo</button>
-        </form>
-
-        <!-- Remove Profile Photo -->
-        {% if user['photo'] %}
-        <form method="POST" action="/remove_photo" class="mt-2">
-            <button type="submit" class="btn btn-danger">Remove Photo</button>
-        </form>
-        {% endif %}
     </div>
 
     <!-- User Information Section -->
@@ -28,11 +15,6 @@
         <div class="mb-3">
             <label for="email" class="form-label">Email:</label>
             <input type="email" name="email" class="form-control" value="{{ user['email'] }}" required>
-        </div>
-
-        <div class="mb-3">
-            <label for="bio" class="form-label">Bio:</label>
-            <textarea name="bio" class="form-control" rows="3" placeholder="Tell us about yourself...">{{ user['bio'] }}</textarea>
         </div>
 
         <!-- Old Password -->
@@ -56,11 +38,6 @@
         <button type="submit" class="btn btn-success">Save Changes</button>
         <a href="/profile" class="btn btn-secondary">Cancel</a>
     </form>
-
-    <!-- Profile Completion Status -->
-    <div class="progress mt-4">
-        <div class="progress-bar" role="progressbar" style="width: 75%;" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">Profile Completion: 75%</div>
-    </div>
 </div>
 
 <!-- JavaScript for Show/Hide Passwords -->
@@ -85,9 +62,6 @@
     }
     .form-label {
         font-weight: bold;
-    }
-    .progress {
-        height: 20px;
     }
 </style>
 

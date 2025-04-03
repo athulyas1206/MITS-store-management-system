@@ -459,15 +459,18 @@ def profile():
 
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE id=?", (session['user_id'],))
+    cursor.execute("SELECT mut_id, email FROM users WHERE id=?", (session['user_id'],))
     user = cursor.fetchone()
     conn.close()
 
     if not user:
-        flash('User not found.', 'danger')
+        flash('User  not found.', 'danger')
         return redirect('/login')
 
-    return render_template('profile.html', user=user)
+    # Assuming user is a tuple (mut_id, email)
+    mut_id, email = user  # Unpack the values
+
+    return render_template('profile.html', mut_id=mut_id, email=email)
 
 @app.route('/remove_profile_photo', methods=['POST'])
 def remove_profile_photo():
@@ -517,16 +520,15 @@ def edit_profile():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        photo = request.files['photo']
 
-        # Update profile picture if a new one is uploaded
-        if photo and allowed_file(photo.filename):
-            filename = secure_filename(f"{user_id}_{photo.filename}")
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            photo.save(photo_path)
+        # # Update profile picture if a new one is uploaded
+        # if photo and allowed_file(photo.filename):
+        #     filename = secure_filename(f"{user_id}_{photo.filename}")
+        #     photo_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        #     photo.save(photo_path)
 
             # Save file path in the database
-            cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
+            #cursor.execute("UPDATE users SET photo=? WHERE id=?", (filename, user_id))
 
         # Update email and password
         cursor.execute("UPDATE users SET email=?, password=? WHERE id=?", (email, password, user_id))
