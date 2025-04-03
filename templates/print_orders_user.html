@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Print Orders</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+
+<body class="bg-light">
+    <div class="container mt-4">
+        <div class="mt-4">
+            <a href="/home" class="btn btn-primary">🏠 Back to Home</a>
+        </div>
+        <h2 class="text-center text-primary">📄 My Print Orders</h2>
+
+        <!-- Active Print Orders -->
+        <h3 class="text-success mt-4">🟢 Active Orders</h3>
+        {% if active_orders %}
+        <table class="table table-bordered table-hover mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Copies</th>
+                    <th>Layout</th>
+                    <th>Print Type</th>
+                    <th>Sides</th>
+                    <th>Expected Date</th>
+                    <th>Status</th>
+                    <th>PDF</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in active_orders %}
+                <tr>
+                    <td>{{ order[0] }}</td>
+                    <td>{{ order[2] }}</td>
+                    <td>{{ order[3] }}</td>
+                    <td>{{ order[4] }}</td>
+                    <td>{{ order[5] }}</td>
+                    <td>{{ order[6] }}</td>
+                    <td><span class="badge bg-warning">{{ order[8] }}</span></td>
+                    <td><a href="{{ url_for('static', filename='uploads/' + order[7]) }}" target="_blank" class="btn btn-sm btn-info">View PDF</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No active print orders.</p>
+        {% endif %}
+
+        <!-- Completed Print Orders -->
+        <h3 class="text-secondary mt-4">🔵 Completed Orders</h3>
+        {% if completed_orders %}
+        <table class="table table-bordered table-hover mt-3">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Copies</th>
+                    <th>Layout</th>
+                    <th>Print Type</th>
+                    <th>Sides</th>
+                    <th>Expected Date</th>
+                    <th>PDF</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in completed_orders %}
+                <tr>
+                    <td>{{ order[0] }}</td>
+                    <td>{{ order[2] }}</td>
+                    <td>{{ order[3] }}</td>
+                    <td>{{ order[4] }}</td>
+                    <td>{{ order[5] }}</td>
+                    <td>{{ order[6] }}</td>
+                    <td><a href="{{ url_for('static', filename='uploads/' + order[7]) }}" target="_blank" class="btn btn-sm btn-info">View PDF</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">No completed print orders.</p>
+        {% endif %}
+
+        
+    </div>
+</body>
+
+</html>

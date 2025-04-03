@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, flash, session,url_for,jsonify
+from flask import Flask, render_template, request, redirect, flash, session,url_for,jsonify,g
 from werkzeug.utils import secure_filename
 import sqlite3
 import os
@@ -9,6 +9,7 @@ from recommendation import get_recommendations
 from flask_mail import Mail, Message
 import random
 import re  # Import regex for validation
+import pytz
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Required for session management
@@ -37,6 +38,10 @@ def validate_user(mut_id, password):
     conn.close()
     return user
 
+
+
+
+
 @app.route('/')
 def index():
     return redirect('/login')
@@ -62,6 +67,27 @@ def login():
             flash('Invalid MUT ID or Password. Try again.', 'danger')
 
     return render_template('login.html')
+
+@app.route("/print_orders_user")
+def print_orders_user():
+    if "mut_id" not in session:
+        return redirect(url_for("login"))
+
+    mut_id = session["mut_id"]
+    conn = sqlite3.connect("print_orders.db")
+    cursor = conn.cursor()
+
+    # Fetch active print orders
+    cursor.execute("SELECT * FROM print_orders WHERE mut_id = ?", (mut_id,))
+    active_orders = cursor.fetchall()
+
+    # Fetch completed print orders
+    cursor.execute("SELECT * FROM order_history WHERE mut_id = ?", (mut_id,))
+    completed_orders = cursor.fetchall()
+
+    conn.close()
+
+    return render_template("print_orders_user.html", active_orders=active_orders, completed_orders=completed_orders)
 
 
 
