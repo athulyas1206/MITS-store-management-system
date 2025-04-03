@@ -19,9 +19,9 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_print_orders') }}">Print Orders</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_print_history') }}">Print Order History</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/admin_stationary_orders">Stationary Orders</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_stationary_history') }}">Stationary Order History</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_stationary_items') }}">Stationary Items</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/admin_stationary_orders">Stationery Orders</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_stationary_history') }}">Stationery Order History</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{{ url_for('admin_stationary_items') }}">Stationery Items</a></li>
                     <li class="nav-item"><a class="nav-link text-danger" href="{{ url_for('logout') }}">Logout</a></li>
                 </ul>
             </div>
@@ -30,7 +30,7 @@
 
     <div class="container mt-4">
         <h2>Stationary Items</h2>
-        <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addItemModal">Add Item</button>
+        <!-- <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addItemModal">Add Item</button> -->
 
         <!-- Items Table -->
         <table class="table table-bordered">
@@ -53,8 +53,15 @@
                     <td>₹{{ item[3] }}</td>
                     <td>{{ item[4] }}</td>
                     <td>
-                        <a href=# class="btn btn-warning btn-sm">Edit</a>
-                        <a href=# class="btn btn-danger btn-sm">Delete</a>
+                        <button class="btn btn-warning btn-sm edit-btn" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#editItemModal"
+                            data-id="{{ item[0] }}"
+                            data-name="{{ item[1] }}"
+                            data-stock="{{ item[4] }}">
+                            Edit
+                        </button>
+                        <!-- <a href="#" class="btn btn-danger btn-sm">Delete</a> -->
                     </td>
                 </tr>
                 {% endfor %}
@@ -66,12 +73,12 @@
     <div class="modal fade" id="addItemModal" tabindex="-1" aria-labelledby="addItemModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
+                <!-- <div class="modal-header">
                     <h5 class="modal-title">Add New Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
+                </div> -->
                 <div class="modal-body">
-                    <form action=# method="post">
+                    <form action="#" method="post">
                         <div class="mb-3">
                             <label class="form-label">Item Name</label>
                             <input type="text" class="form-control" name="name" required>
@@ -88,12 +95,56 @@
                             <label class="form-label">Stock</label>
                             <input type="number" class="form-control" name="stock" required>
                         </div>
-                        <button type="submit" class="btn btn-primary">Add Item</button>
+                        <!-- <button type="submit" class="btn btn-primary">Add Item</button> -->
                     </form>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Edit Item Modal -->
+    <div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Stock</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ url_for('update_stock') }}" method="post">
+                        <input type="hidden" id="editItemId" name="id">
+                        <div class="mb-3">
+                            <label class="form-label">Item Name</label>
+                            <input type="text" class="form-control" id="editItemName" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stock</label>
+                            <input type="number" class="form-control" name="stock" id="editItemStock" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Stock</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const editButtons = document.querySelectorAll(".edit-btn");
+
+            editButtons.forEach(button => {
+                button.addEventListener("click", function() {
+                    const id = this.getAttribute("data-id");
+                    const name = this.getAttribute("data-name");
+                    const stock = this.getAttribute("data-stock");
+
+                    document.getElementById("editItemId").value = id;
+                    document.getElementById("editItemName").value = name;
+                    document.getElementById("editItemStock").value = stock;
+                });
+            });
+        });
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

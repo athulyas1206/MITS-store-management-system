@@ -53,7 +53,9 @@ def login():
         password = request.form['password']
 
         if mut_id == 'admin' and password == 'admin':  # Change to a secure password
+            
             session['mut_id'] = 'admin'
+            session["admin"] = True  # ✅ This ensures admin session is set
             flash('Admin login successful!', 'success')
             return redirect('/admin_dashboard')
 
@@ -156,11 +158,15 @@ def admin_print_history():
 
 @app.route('/admin_stationary_items')
 def admin_stationary_items():
+    if "mut_id" not in session or session["mut_id"] != "admin":
+        flash("Unauthorized access. Please log in as admin.", "danger")
+        return redirect(url_for("login"))
+
     # Connect to the SQLite database
     conn = sqlite3.connect('stationary.db')
     cursor = conn.cursor()
 
-    # Fetch all the items from the stationary_items table
+    # Fetch all items from the stationary_items table
     cursor.execute("SELECT * FROM stationary_items")
     items = cursor.fetchall()
 
@@ -169,6 +175,7 @@ def admin_stationary_items():
 
     # Render the template with the items
     return render_template('admin_stationary_items.html', items=items)
+
 
 @app.route('/admin_stationary_orders')
 def admin_stationary_orders():
@@ -265,6 +272,29 @@ def update_stationary_order(order_id, new_status):
     conn.close()
     
     return jsonify({"success": True})
+
+@app.route("/update_stock", methods=["POST"])
+def update_stock():
+    if "admin" not in session:
+        flash("Unauthorized access. Please log in as admin.", "danger")
+        return redirect(url_for("login"))
+
+    item_id = request.form["id"]
+    new_stock = request.form["stock"]
+
+    conn = sqlite3.connect("stationary.db")
+    cursor = conn.cursor()
+
+    # ✅ Use correct table name: stationary_items
+    cursor.execute("UPDATE stationary_items SET stock = ? WHERE id = ?", (new_stock, item_id))
+    conn.commit()
+    conn.close()
+
+    flash("Stock updated successfully!", "success")
+    return redirect(url_for("admin_stationary_items"))
+
+
+
         
 @app.route('/upload/<filename>')
 def upload(filename):
@@ -939,20 +969,32 @@ def buy_cart_items():
     conn = sqlite3.connect("stationary.db")
     cursor = conn.cursor()
 
-    # Fetch cart items with product price
-    cursor.execute("SELECT c.product_id, c.quantity, s.price FROM cart c JOIN stationary_items s ON c.product_id = s.id WHERE c.user_id = ?", (user_id,))
+    # Fetch cart items with product price and stock
+    cursor.execute("SELECT c.product_id, c.quantity, s.price, s.stock FROM cart c JOIN stationary_items s ON c.product_id = s.id WHERE c.user_id = ?", (user_id,))
     cart_items = cursor.fetchall()
 
     if not cart_items:
         conn.close()
         return redirect(url_for('cart_page'))  # No items in cart, redirect back
 
-    # Insert cart items into transactions table with total cost
+    # Insert cart items into transactions table and update stock
     for item in cart_items:
-        product_id, quantity, price = item
+        product_id, quantity, price, stock = item
         total_cost = price * quantity  # Calculate total cost
+
+        # Ensure stock is available before processing the order
+        if stock < quantity:
+            flash(f"Not enough stock for Product ID {product_id}. Available: {stock}, Requested: {quantity}", "danger")
+            conn.close()
+            return redirect(url_for('cart_page'))
+
+        # Insert into transactions table
         cursor.execute("INSERT INTO transactions (user_id, product_id, quantity, total_cost) VALUES (?, ?, ?, ?)",
                        (user_id, product_id, quantity, total_cost))
+
+        # Update stock in stationary_items
+        new_stock = stock - quantity
+        cursor.execute("UPDATE stationary_items SET stock = ? WHERE id = ?", (new_stock, product_id))
 
     # Clear cart after purchase
     cursor.execute("DELETE FROM cart WHERE user_id = ?", (user_id,))
