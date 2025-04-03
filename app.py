@@ -670,9 +670,29 @@ def stationary():
         ''')
         recommended_items = cursor.fetchall()
 
-    conn.close()
-    return render_template('stationary.html', items=items, recommended_items=recommended_items)
+    # Fetch cart count
+    cart_count = 0
+    orders_count = 0
+    if user_id:
+        cursor.execute("SELECT COUNT(*) FROM cart WHERE user_id = ?", (user_id,))
+        cart_count = cursor.fetchone()[0]
 
+        # Fetch active + completed order count
+        cursor.execute("SELECT COUNT(*) FROM transactions WHERE user_id = ?", (user_id,))
+        active_orders = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM s_order_history WHERE user_id = ?", (user_id,))
+        completed_orders = cursor.fetchone()[0]
+
+        orders_count = active_orders + completed_orders
+
+    conn.close()
+    
+    return render_template('stationary.html', 
+                           items=items, 
+                           recommended_items=recommended_items, 
+                           cart_count=cart_count, 
+                           orders_count=orders_count)
 
 @app.route('/product/<int:product_id>')
 def product_details(product_id):
@@ -860,6 +880,7 @@ def s_orders():
     conn = sqlite3.connect("stationary.db")
     cursor = conn.cursor()
 
+    # Fetch ongoing orders from `transactions`
     cursor.execute("""
         SELECT t.id, s.name, t.quantity, t.total_cost, t.status, t.purchase_date
         FROM transactions t
@@ -867,11 +888,22 @@ def s_orders():
         WHERE t.user_id = ?
         ORDER BY t.purchase_date DESC
     """, (user_id,))
+    ongoing_orders = cursor.fetchall()
 
-    orders = cursor.fetchall()
+    # Fetch completed orders from `s_order_history`
+    cursor.execute("""
+        SELECT h.id, s.name, h.quantity, h.total_cost, h.status, h.purchase_date
+        FROM s_order_history h
+        JOIN stationary_items s ON h.product_id = s.id
+        WHERE h.user_id = ?
+        ORDER BY h.purchase_date DESC
+    """, (user_id,))
+    completed_orders = cursor.fetchall()
+
     conn.close()
 
-    return render_template("s_orders.html", orders=orders)
+    return render_template("s_orders.html", ongoing_orders=ongoing_orders, completed_orders=completed_orders)
+
 
 @app.route('/buy_cart_items', methods=['POST'])
 def buy_cart_items():
