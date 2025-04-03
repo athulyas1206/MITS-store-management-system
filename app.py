@@ -68,8 +68,6 @@ def login():
 
 
 
-
-
 @app.route('/admin_dashboard')
 def admin_dashboard():
     return render_template('admin.html')
@@ -216,11 +214,6 @@ def admin_stationary_history():
     return render_template('admin_stationary_history.html', orders=orders)
 
 
-
-
-
-
-
 @app.route('/update_status', methods=['POST'])
 def update_status():
         order_id = request.form['order_id']
@@ -249,9 +242,6 @@ def update_stationary_order(order_id, new_status):
     conn.close()
     
     return jsonify({"success": True})
-
-
-
         
 @app.route('/upload/<filename>')
 def upload(filename):
@@ -341,8 +331,6 @@ def verify_otp():
 
     return render_template('verify_otp.html')
 
-
-
 @app.route('/delete_order/<int:order_id>', methods=['POST'])
 def delete_order(order_id):
     conn = sqlite3.connect('print_orders.db')
@@ -370,9 +358,6 @@ def order_history():
     orders = cursor.fetchall()
     conn.close()
     return render_template("admin.html", orders=orders)
-
-
-
 
 
 @app.route('/home')
@@ -447,84 +432,6 @@ def order_summary():
 
     return render_template('order_summary.html', **order_details)
 
-
-@app.route('/profile')
-def profile():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
-
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (session['user_id'],))
-    user = cursor.fetchone()
-    conn.close()
-
-    if not user:
-        flash('User not found.', 'danger')
-        return redirect('/login')
-
-    return render_template('profile.html', user=user)
-
-@app.route('/remove_profile_photo', methods=['POST'])
-def remove_profile_photo():
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET photo = 'default_profile.png' WHERE mut_id = ?", (session['mut_id'],))
-    conn.commit()
-    conn.close()
-
-
-
-
-@app.route('/orders')
-def orders():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
-
-    conn = sqlite3.connect('print_orders.db')
-    cursor = conn.cursor()
-
-    # Fetch Print Orders
-    cursor.execute("SELECT id, expected_datetime, status FROM print_orders WHERE mut_id=?", (session['mut_id'],))
-    print_orders = cursor.fetchall()
-
-    # Fetch Stationary Orders (to be implemented later)
-    cursor.execute("SELECT id, expected_datetime, status FROM stationary_orders WHERE mut_id=?", (session['mut_id'],))
-    stationary_orders = cursor.fetchall()
-
-    conn.close()
-
-    return render_template('orders.html', print_orders=print_orders, stationary_orders=stationary_orders)
-
-
-@app.route('/edit_profile', methods=['GET', 'POST'])
-def edit_profile():
-    if 'user_id' not in session:
-        flash('Please log in first.', 'warning')
-        return redirect('/login')
-
-    user_id = session['user_id']
-
-    # Connect to the database
-    # Fetch user email from the database
-    conn = sqlite3.connect('users.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT email FROM users WHERE mut_id=?', (order_details['mut_id'],))
-    user = cursor.fetchone()
-    conn.close()
-
-    if user:
-        user_email = user[0]
-        # Send order summary email
-        send_order_summary_email(user_email, order_details['num_pages'], order_details['copies'], order_details['total_cost'])
-
-    # Clear the order details from the session
-    session.pop('order_details', None)
-    flash('Order confirmed! A summary has been sent to your email.', 'success')
-    return redirect('/home')
-
 @app.route('/confirm_order', methods=['POST'])
 def confirm_order():
     order_details = session.get('order_details')
@@ -562,8 +469,6 @@ def confirm_order():
     flash('Order confirmed! A summary has been sent to your email.', 'success')
     return redirect('/home')
 
-
-
 def send_order_summary_email(to_email, num_pages, copies, total_cost):
     subject = "Your Order Summary"
     body = f"""
@@ -584,8 +489,6 @@ def send_order_summary_email(to_email, num_pages, copies, total_cost):
         print("Email sent successfully!")
     except Exception as e:
         print(f"Failed to send email: {e}")
-
-
 
 
 @app.route('/pay_on_google_pay', methods=['POST'])
@@ -613,14 +516,59 @@ def pay_on_google_pay():
     flash('Payment initiated! A summary has been sent to your email.', 'success')
     return redirect('/home')
 
+@app.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT mut_id, email, photo FROM users WHERE id=?", (session['user_id'],))
+    user = cursor.fetchone()
+    conn.close()
+
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect('/login')
+
+    return render_template('profile.html', user=user)
+
+@app.route('/remove_profile_photo', methods=['POST'])
+def remove_profile_photo():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET photo = 'default_profile.png' WHERE mut_id = ?", (session['mut_id'],))
+    conn.commit()
+    conn.close()
+
+@app.route('/orders')
+def orders():
+    if 'user_id' not in session:
+        flash('Please log in first.', 'warning')
+        return redirect('/login')
+
+    conn = sqlite3.connect('print_orders.db')
+    cursor = conn.cursor()
+
+    # Fetch Print Orders
+    cursor.execute("SELECT id, expected_datetime, status FROM print_orders WHERE mut_id=?", (session['mut_id'],))
+    print_orders = cursor.fetchall()
+
+    # Fetch Stationary Orders (to be implemented later)
+    cursor.execute("SELECT id, expected_datetime, status FROM stationary_orders WHERE mut_id=?", (session['mut_id'],))
+    stationary_orders = cursor.fetchall()
+
+    conn.close()
+
+    return render_template('orders.html', print_orders=print_orders, stationary_orders=stationary_orders)
+
+
 @app.route('/cancel_order')
 def cancel_order():
     # Set a flash message indicating the order has been canceled
     flash('Your order is cancelled.', 'info')
     return redirect(url_for('home'))
-
-
-
 
 @app.route('/stationary')
 def stationary():
@@ -735,8 +683,6 @@ def cart_page():
 
     return render_template("cart.html", cart_items=cart_items,total_cost=total_cost)
 
-
-
 @app.route('/update_cart/<int:product_id>', methods=['POST'])
 def update_cart(product_id):
     if 'user_id' not in session:
@@ -766,7 +712,6 @@ def remove_from_cart(product_id):
     conn.close()
 
     return redirect(url_for('cart_page'))  # Redirect back to cart page
-
 
 @app.route('/buy', methods=['POST'])
 def buy_items():
@@ -891,11 +836,6 @@ def move_order_to_history(order_id):
     
     conn.commit()
     conn.close()
-
-
-
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
